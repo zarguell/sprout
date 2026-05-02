@@ -16,7 +16,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 @users_router.get("/me", response_model=UserRead)
 async def get_current_user_profile(current_user: User = Depends(get_current_user)):
-    return UserRead.from_orm(current_user)
+    return UserRead.model_validate(current_user)
 
 
 @users_router.put("/me", response_model=UserRead)
@@ -30,14 +30,14 @@ async def update_current_user_profile(
     if data.password is not None:
         current_user.hashed_password = get_password_hash(data.password)
     await db.commit()
-    return UserRead.from_orm(current_user)
+    return UserRead.model_validate(current_user)
 
 
 @users_router.get("", response_model=list[UserRead])
 async def list_users(current_user: User = Depends(get_current_user), db = Depends(get_db)):
     result = await db.execute(select(User))
     users = result.scalars().all()
-    return [UserRead.from_orm(u) for u in users]
+    return [UserRead.model_validate(u) for u in users]
 
 
 @auth_router.post("/token", response_model=TokenResponse)
