@@ -124,6 +124,12 @@ Use the token as `Authorization: Bearer <token>` header.
 - **Scheduler**: APScheduler
 - **Deployment**: Docker, Docker Compose
 
+## Development
+
+See [AGENTS.md](AGENTS.md) for development conventions, best practices, and
+common pitfalls. This project follows test-driven development — write a
+failing test first, then make it pass.
+
 ## Environment Variables
 
 | Variable | Required | Default | Description |
