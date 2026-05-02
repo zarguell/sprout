@@ -69,7 +69,7 @@
     },
     async deletePhoto(photoId) {
         if (!confirm('Delete this photo?')) return;
-        const res = await fetch('/api/plants/' + this.plant.id + '/photos/' + photoId, { method: 'DELETE' });
+        const res = await fetch('/api/photos/' + photoId, { method: 'DELETE' });
         if (res.ok) location.reload();
     },
     // Lightbox

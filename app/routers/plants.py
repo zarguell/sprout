@@ -35,13 +35,13 @@ async def list_active_plants(
     return [PlantRead.model_validate(p) for p in plants]
 
 
-@router.get("/archive", response_model=list[PlantRead])
+@router.get("/archived", response_model=list[PlantRead])
 async def list_archived_plants(
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
     result = await db.execute(
-        select(Plant).where(Plant.archived == True).order_by(Plant.name)
+        select(Plant).where(Plant.archived == True).order_by(Plant.archived_at.desc())
     )
     plants = result.scalars().all()
     return [PlantRead.model_validate(p) for p in plants]

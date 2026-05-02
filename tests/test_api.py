@@ -61,7 +61,7 @@ async def auth_client(client):
     async with TestSession() as db:
         from app.models import User
 
-        user = User(username="testuser", display_name="Test", password_hash=get_password_hash("pass123"))
+        user = User(username="testuser", display_name="Test", hashed_password=get_password_hash("pass123"))
         db.add(user)
         await db.commit()
 
@@ -70,7 +70,7 @@ async def auth_client(client):
         data={"username": "testuser", "password": "pass123"},
     )
     assert resp.status_code == 200
-    client.cookies.set("session", resp.json()["access_token"])
+    client.cookies.set("token", resp.json()["access_token"])
     return client
 
 
@@ -88,7 +88,7 @@ async def test_login(auth_client):
 async def test_login_bad_password(auth_client):
     resp = await auth_client.post(
         "/api/auth/token",
-        data={"username": "testuser", "password": "wrong"},
+        data={"username": "testuser", "password": "wrongpass"},
     )
     assert resp.status_code == 401
 
@@ -112,7 +112,7 @@ async def test_create_plant(auth_client):
         "/api/plants/",
         json={"name": "Monstera", "species": "Monstera deliciosa", "location": "Living room"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     assert resp.json()["name"] == "Monstera"
 
 
@@ -123,7 +123,7 @@ async def test_list_plants(auth_client):
     resp = await auth_client.get("/api/plants/")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["total"] == 2
+    assert len(data) == 2
 
 
 @pytest.mark.asyncio
@@ -148,7 +148,7 @@ async def test_update_plant(auth_client):
 async def test_archive_plant(auth_client):
     create = await auth_client.post("/api/plants/", json={"name": "Dead plant"})
     plant_id = create.json()["id"]
-    resp = await auth_client.post(f"/api/plants/{plant_id}/archive")
+    resp = await auth_client.post(f"/api/plants/{plant_id}/archive", json={})
     assert resp.status_code == 200
     assert resp.json()["archived"] is True
 
@@ -158,7 +158,7 @@ async def test_delete_plant(auth_client):
     create = await auth_client.post("/api/plants/", json={"name": "Goner"})
     plant_id = create.json()["id"]
     resp = await auth_client.delete(f"/api/plants/{plant_id}")
-    assert resp.status_code == 200
+    assert resp.status_code == 204
     resp = await auth_client.get(f"/api/plants/{plant_id}")
     assert resp.status_code == 404
 
@@ -174,7 +174,7 @@ async def test_create_task(auth_client):
         f"/api/plants/{plant_id}/tasks/",
         json={"type": "water", "label": "Weekly water", "interval_days": 7, "due_date": "2026-05-03"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     assert resp.json()["type"] == "water"
 
 
@@ -187,7 +187,7 @@ async def test_complete_task(auth_client):
         json={"type": "water", "label": "Water", "interval_days": 7, "due_date": "2026-05-01"},
     )
     task_id = task.json()["id"]
-    resp = await auth_client.post(f"/api/plants/{plant_id}/tasks/{task_id}/complete")
+    resp = await auth_client.post(f"/api/tasks/{task_id}/complete", json={})
     assert resp.status_code == 200
     # Recurring task should advance due_date by 7 days
     data = resp.json()
@@ -205,7 +205,7 @@ async def test_add_activity(auth_client):
         f"/api/plants/{plant_id}/activity/",
         json={"content": "Repotted into a bigger pot"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 201
     assert "bigger pot" in resp.json()["content"]
 
 
@@ -217,7 +217,7 @@ async def test_list_activity(auth_client):
     await auth_client.post(f"/api/plants/{plant_id}/activity/", json={"content": "Note 2"})
     resp = await auth_client.get(f"/api/plants/{plant_id}/activity/")
     assert resp.status_code == 200
-    assert resp.json()["total"] == 2
+    assert len(resp.json()) == 2
 
 
 # --- Due tasks endpoint ---

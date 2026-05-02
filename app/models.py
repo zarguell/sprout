@@ -48,7 +48,7 @@ class Photo(Base):
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     caption: Mapped[str | None] = mapped_column(Text, default=None)
 
-    plant: Mapped["Plant"] = relationship(back_populates="photos")
+    plant: Mapped["Plant"] = relationship(back_populates="photos", foreign_keys=[plant_id])
     uploaded_by_user: Mapped["User"] = relationship(back_populates="photos_uploaded")
 
 
@@ -60,8 +60,8 @@ class Plant(Base):
     species: Mapped[str | None] = mapped_column(Text, default=None)
     location: Mapped[str | None] = mapped_column(Text, default=None)
     notes: Mapped[str | None] = mapped_column(Text, default=None)
-    primary_photo_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("photos.id", ondelete="SET NULL"), default=None)
-    archived: Mapped[bool] = mapped_column(Boolean, server_default=func.false())
+    primary_photo_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("photos.id", ondelete="SET NULL", use_alter=True), default=None)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     archived_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), default=None)
     archive_reason: Mapped[str | None] = mapped_column(Text, default=None)
@@ -69,11 +69,11 @@ class Plant(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    created_by_user: Mapped["User"] = relationship(back_populates="plants_created")
+    created_by_user: Mapped["User"] = relationship(back_populates="plants_created", foreign_keys=[created_by])
     archived_by_user: Mapped["User"] = relationship(foreign_keys=[archived_by])
     primary_photo: Mapped["Photo | None"] = relationship(foreign_keys=[primary_photo_id])
     tasks: Mapped[list["Task"]] = relationship(back_populates="plant", cascade="all, delete-orphan")
-    photos: Mapped[list["Photo"]] = relationship(back_populates="plant", cascade="all, delete-orphan")
+    photos: Mapped[list["Photo"]] = relationship(back_populates="plant", cascade="all, delete-orphan", foreign_keys="[Photo.plant_id]")
     activity: Mapped[list["PlantActivity"]] = relationship(back_populates="plant", cascade="all, delete-orphan")
 
 
@@ -91,15 +91,15 @@ class Task(Base):
     due_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     last_completed_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
     last_completed_by: Mapped[int | None] = mapped_column(Integer, ForeignKey("users.id"), default=None)
-    is_active: Mapped[bool] = mapped_column(Boolean, server_default=func.true())
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     notes: Mapped[str | None] = mapped_column(Text, default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     plant: Mapped["Plant"] = relationship(back_populates="tasks")
-    created_by_user: Mapped["User"] = relationship(back_populates="tasks_created")
-    last_completed_by_user: Mapped["User"] = relationship(back_populates="tasks_completed")
+    created_by_user: Mapped["User"] = relationship(back_populates="tasks_created", foreign_keys=[created_by])
+    last_completed_by_user: Mapped["User"] = relationship(back_populates="tasks_completed", foreign_keys=[last_completed_by])
 
 
 class PlantActivity(Base):

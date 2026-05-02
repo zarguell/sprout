@@ -9,7 +9,10 @@ from app.models import Plant, Task, User
 from app.schemas import TaskComplete, TaskCreate, TaskRead, TaskUpdate
 
 router = APIRouter(prefix="/plants/{plant_id}/tasks", tags=["tasks"])
+flat_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
+
+# --- Plant-scoped routes ---
 
 @router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
@@ -29,6 +32,8 @@ async def create_task(
         is_active=True,
     )
     db.add(new_task)
+    await db.flush()
+    await db.refresh(new_task)
     return TaskRead.model_validate(new_task)
 
 
@@ -40,7 +45,7 @@ async def list_tasks(
 ):
     result = await db.execute(
         select(Task)
-        .where(Task.plant_id == plant_id, Task.is_active == True)
+        .where(Task.plant_id == plant_id)
         .order_by(Task.due_date)
     )
     tasks = result.scalars().all()
@@ -65,17 +70,17 @@ async def get_task(
     return TaskRead.model_validate(task)
 
 
-@router.put("/{task_id}", response_model=TaskRead)
+# --- Flat routes (not scoped under /plants/{plant_id}) ---
+
+
+@flat_router.put("/{task_id}", response_model=TaskRead)
 async def update_task(
-    plant_id: int,
     task_id: int,
     task_update: TaskUpdate,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.plant_id == plant_id)
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(
@@ -88,36 +93,29 @@ async def update_task(
     return TaskRead.model_validate(task)
 
 
-@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@flat_router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
-    plant_id: int,
     task_id: int,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.plant_id == plant_id)
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
         )
-    task.is_active = False
-    task.updated_at = datetime.now(timezone.utc)
+    await db.delete(task)
 
 
-@router.post("/{task_id}/complete", response_model=TaskRead)
+@flat_router.post("/{task_id}/complete", response_model=TaskRead)
 async def complete_task(
-    plant_id: int,
     task_id: int,
     body: TaskComplete,
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
-    result = await db.execute(
-        select(Task).where(Task.id == task_id, Task.plant_id == plant_id)
-    )
+    result = await db.execute(select(Task).where(Task.id == task_id))
     task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(
@@ -131,15 +129,16 @@ async def complete_task(
             task.notes += "\n" + body.notes
         else:
             task.notes = body.notes
-    if body.advance and task.interval_days is not None:
-        if body.next_due_date:
-            task.due_date = body.next_due_date
+    if body.advance:
+        if task.interval_days is not None:
+            # Recurring task: advance the due date
+            if body.next_due_date:
+                task.due_date = body.next_due_date
+            else:
+                task.due_date += timedelta(days=task.interval_days)
         else:
-            task.due_date += timedelta(days=task.interval_days)
-    else:
-        task.is_active = False
+            # One-shot task consumed
+            task.is_active = False
+    # If advance=False: no date change, task stays active as-is
     task.updated_at = now
     return TaskRead.model_validate(task)
-
-
-

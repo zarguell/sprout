@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Query, Response
 from fastapi.responses import FileResponse
 from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +28,7 @@ router = APIRouter(prefix="/plants/{plant_id}/photos", tags=["photos"])
 async def upload_photo(
     plant_id: int,
     file: UploadFile = File(...),
+    caption: str | None = Form(None),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -73,7 +74,7 @@ async def upload_photo(
         original_path=original_path_rel,
         thumbnail_path=thumbnail_path_rel,
         uploaded_by=current_user.id,
-        caption=None,
+        caption=caption,
     )
     db.add(photo)
     await db.flush()
@@ -96,8 +97,8 @@ async def upload_photo(
         select(Plant.primary_photo_id).where(Plant.id == plant_id)
     )
     primary_id = plant_result.scalar()
-    original_url = f"/plants/{plant_id}/photos/{photo.id}/file"
-    thumbnail_url = f"/plants/{plant_id}/photos/{photo.id}/thumbnail"
+    original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
+    thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
     is_primary = photo.id == primary_id
     return PhotoRead.model_validate(
         {
@@ -136,8 +137,8 @@ async def list_photos(
     primary_id = plant_result.scalar()
     photos_read = []
     for photo in photos:
-        original_url = f"/plants/{plant_id}/photos/{photo.id}/file"
-        thumbnail_url = f"/plants/{plant_id}/photos/{photo.id}/thumbnail"
+        original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
+        thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
         is_primary = photo.id == primary_id
         photos_read.append(
             PhotoRead.model_validate(
@@ -154,40 +155,6 @@ async def list_photos(
             )
         )
     return photos_read
-
-
-@router.delete("/{photo_id}", status_code=204)
-async def delete_photo(
-    plant_id: int,
-    photo_id: int,
-    current_user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(
-        select(Photo).where(Photo.id == photo_id, Photo.plant_id == plant_id)
-    )
-    photo = result.scalar_one_or_none()
-    if not photo:
-        raise HTTPException(status_code=404, detail="Photo not found")
-
-    # Check if primary
-    plant = await db.get(Plant, plant_id)
-    if plant.primary_photo_id == photo.id:
-        plant.primary_photo_id = None
-
-    # Delete files
-    original_full = Path(PHOTO_STORAGE_PATH) / photo.original_path
-    thumbnail_full = Path(PHOTO_STORAGE_PATH) / photo.thumbnail_path
-    try:
-        original_full.unlink(missing_ok=True)
-        thumbnail_full.unlink(missing_ok=True)
-    except:
-        pass
-
-    # Delete record
-    await db.delete(photo)
-    await db.commit()
-    return Response(status_code=204)
 
 
 @router.post("/{photo_id}/set-primary", response_model=PhotoRead)
@@ -212,8 +179,8 @@ async def set_primary_photo(
     await db.commit()
 
     # Return PhotoRead
-    original_url = f"/plants/{plant_id}/photos/{photo.id}/file"
-    thumbnail_url = f"/plants/{plant_id}/photos/{photo.id}/thumbnail"
+    original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
+    thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
     return PhotoRead.model_validate(
         {
             "id": photo.id,
@@ -269,3 +236,45 @@ async def serve_thumbnail(
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(file_path, media_type="image/jpeg")
+
+
+# Flat router for non-plant-scoped photo endpoints
+flat_router = APIRouter(prefix="/photos", tags=["photos"])
+
+
+@flat_router.delete("/{photo_id}", status_code=204)
+async def delete_photo(
+    photo_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Photo).where(Photo.id == photo_id)
+    )
+    photo = result.scalar_one_or_none()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    plant_id = photo.plant_id
+
+    # Check if primary and null it
+    plant = await db.get(Plant, plant_id)
+    if plant and plant.primary_photo_id == photo.id:
+        plant.primary_photo_id = None
+
+    # Delete files from disk (best-effort per PRD: DB record removed regardless)
+    original_full = Path(PHOTO_STORAGE_PATH) / photo.original_path
+    thumbnail_full = Path(PHOTO_STORAGE_PATH) / photo.thumbnail_path
+    try:
+        original_full.unlink(missing_ok=True)
+    except OSError:
+        pass
+    try:
+        thumbnail_full.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+    # Delete DB record
+    await db.delete(photo)
+    await db.commit()
+    return Response(status_code=204)

@@ -41,8 +41,10 @@ templates = Jinja2Templates(directory="templates")
 app.include_router(users.users_router, prefix="/api")
 app.include_router(users.auth_router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
+app.include_router(tasks.flat_router, prefix="/api")
 app.include_router(plants.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
+app.include_router(photos.flat_router, prefix="/api")
 app.include_router(activity.router, prefix="/api")
 
 
@@ -54,14 +56,13 @@ async def list_due_tasks(
     db=Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
-    seven_days = now + timedelta(days=7)
     result = await db.execute(
         select(Task, Plant)
         .join(Plant)
         .where(
             Task.is_active == True,
             Plant.archived == False,
-            Task.due_date <= seven_days,
+            Task.due_date <= now,
         )
         .order_by(Task.due_date)
     )
@@ -69,7 +70,10 @@ async def list_due_tasks(
     due_tasks = []
     latest = now
     for t, p in rows:
-        days = max(0, (now - t.due_date).days)
+        dd = t.due_date
+        if dd.tzinfo is None:
+            dd = dd.replace(tzinfo=timezone.utc)
+        days = max(0, (now - dd).days)
         due_tasks.append(
             TaskDueRead(
                 task_id=t.id,
@@ -78,8 +82,60 @@ async def list_due_tasks(
                 location=p.location,
                 type=t.type,
                 label=t.label,
-                due_date=t.due_date,
+                due_date=dd,
                 days_overdue=days,
+            )
+        )
+        if dd > latest:
+            latest = dd
+    if not rows:
+        latest = now
+    lm = formatdate(latest.timestamp(), usegmt=True)
+    ims = request.headers.get("If-Modified-Since")
+    if ims:
+        if parsedate_to_datetime(ims) >= latest:
+            return Response(status_code=304)
+    return JSONResponse(
+        content=[t.model_dump(mode="json") for t in due_tasks],
+        headers={"Last-Modified": lm},
+    )
+
+
+@app.get("/api/tasks/upcoming")
+async def list_upcoming_tasks(
+    request: Request,
+    days: int = 3,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(days=days)
+    result = await db.execute(
+        select(Task, Plant)
+        .join(Plant)
+        .where(
+            Task.is_active == True,
+            Plant.archived == False,
+            Task.due_date <= horizon,
+        )
+        .order_by(Task.due_date)
+    )
+    rows = result.all()
+    upcoming_tasks = []
+    latest = now
+    for t, p in rows:
+        delta = (t.due_date - now).days
+        days_until = max(0, -delta) if delta < 0 else delta
+        upcoming_tasks.append(
+            TaskDueRead(
+                task_id=t.id,
+                plant_id=p.id,
+                plant_name=p.name,
+                location=p.location,
+                type=t.type,
+                label=t.label,
+                due_date=t.due_date,
+                days_overdue=max(0, -delta),
             )
         )
         if t.due_date > latest:
@@ -92,7 +148,7 @@ async def list_due_tasks(
         if parsedate_to_datetime(ims) >= latest:
             return Response(status_code=304)
     return JSONResponse(
-        content=[t.model_dump() for t in due_tasks],
+        content=[t.model_dump() for t in upcoming_tasks],
         headers={"Last-Modified": lm},
     )
 
@@ -107,7 +163,7 @@ async def health():
 
 @app.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @app.get("/")
@@ -160,7 +216,7 @@ async def dashboard_page(request: Request, current_user: User = Depends(get_curr
             }
         plant_data.append(entry)
 
-    return templates.TemplateResponse("dashboard.html", {"request": request, "plants": plant_data})
+    return templates.TemplateResponse(request, "dashboard.html", {"plants": plant_data})
 
 
 @app.get("/archive")
@@ -171,7 +227,7 @@ async def archive_page(request: Request, current_user: User = Depends(get_curren
         select(Plant)
         .options(selectinload(Plant.photos))
         .where(Plant.archived == True)
-        .order_by(Plant.name)
+        .order_by(Plant.archived_at.desc())
     )
     plants = result.scalars().unique().all()
 
@@ -193,7 +249,7 @@ async def archive_page(request: Request, current_user: User = Depends(get_curren
             "thumbnail_url": thumbnail_url,
         })
 
-    return templates.TemplateResponse("archive.html", {"request": request, "plants": plant_data})
+    return templates.TemplateResponse(request, "archive.html", {"plants": plant_data})
 
 
 @app.get("/plants/{plant_id}")
@@ -273,9 +329,8 @@ async def plant_detail_page(
     }
 
     return templates.TemplateResponse(
-        "plant_detail.html",
+        request, "plant_detail.html",
         {
-            "request": request,
             "plant": plant_data,
             "tasks": tasks_list,
             "photos": photos_list,
