@@ -14,6 +14,7 @@
             <a href="/" class="text-xl font-bold tracking-tight">🌱 Sprout</a>
             <div class="flex items-center gap-4">
                 <a href="/" class="hover:text-emerald-200 text-sm">Dashboard</a>
+                <a href="/tasks" class="hover:text-emerald-200 text-sm">Tasks</a>
                 <a href="/archive" class="hover:text-emerald-200 text-sm">Archive</a>
                 <button @click="fetch('/api/auth/revoke', {method:'POST'}).then(() => location.href='/login')" class="text-sm hover:text-emerald-200 cursor-pointer bg-transparent border-none">Logout</button>
             </div>
