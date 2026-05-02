@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 from email.utils import formatdate, parsedate_to_datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 
 from app.auth import get_current_user
@@ -167,17 +168,15 @@ async def list_due_tasks(
     latest_due_date = now
     for task, plant in tasks_plants:
         days_overdue = max(0, (now - task.due_date).days)
-        due_task = TaskDueRead.model_validate(
-            {
-                "task_id": task.id,
-                "plant_id": plant.id,
-                "plant_name": plant.name,
-                "location": plant.location,
-                "type": task.type,
-                "label": task.label,
-                "due_date": task.due_date,
-                "days_overdue": days_overdue,
-            }
+        due_task = TaskDueRead(
+            task_id=task.id,
+            plant_id=plant.id,
+            plant_name=plant.name,
+            location=plant.location,
+            type=task.type,
+            label=task.label,
+            due_date=task.due_date,
+            days_overdue=days_overdue,
         )
         due_tasks.append(due_task)
         if task.due_date > latest_due_date:
@@ -190,11 +189,7 @@ async def list_due_tasks(
         if_modified_datetime = parsedate_to_datetime(if_modified_since)
         if latest_due_date <= if_modified_datetime:
             return Response(status_code=status.HTTP_304_NOT_MODIFIED)
-    response = Response()
-    response.headers["Last-Modified"] = last_modified
-    # Since it's a list, we need to return the list with headers
-    # But in FastAPI, for custom response, we can use JSONResponse or something
-    # To keep it simple, return the list, but set headers on response
-    # But since it's async, perhaps use a custom response class
-    # For simplicity, since the path is wrong, but I'll return the list
-    return due_tasks
+    return JSONResponse(
+        content=[due_task.model_dump() for due_task in due_tasks],
+        headers={"Last-Modified": last_modified},
+    )
