@@ -1,6 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+import os
+from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
@@ -32,7 +33,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Sprout", version="0.1.0", lifespan=lifespan)
 
 # Static files (CSS) — no auth required
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.isdir("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Templates
 templates = Jinja2Templates(directory="templates")
