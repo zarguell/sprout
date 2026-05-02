@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.dependencies import form_or_json
 from app.models import Plant, Task, User
 from app.schemas import TaskComplete, TaskCreate, TaskRead, TaskUpdate
 
@@ -17,7 +18,7 @@ flat_router = APIRouter(prefix="/tasks", tags=["tasks"])
 @router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def create_task(
     plant_id: int,
-    task: TaskCreate,
+    task: TaskCreate = Depends(form_or_json(TaskCreate)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -111,7 +112,7 @@ async def delete_task(
 @flat_router.post("/{task_id}/complete", response_model=TaskRead)
 async def complete_task(
     task_id: int,
-    body: TaskComplete,
+    body: TaskComplete = Depends(form_or_json(TaskComplete)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):

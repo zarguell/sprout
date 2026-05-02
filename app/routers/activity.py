@@ -4,6 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.dependencies import form_or_json
 from app.models import Plant, PlantActivity, User
 from app.schemas import ActivityCreate, ActivityRead
 
@@ -44,7 +45,7 @@ async def list_activity(
 @router.post("/", response_model=ActivityRead, status_code=status.HTTP_201_CREATED)
 async def create_activity(
     plant_id: int,
-    data: ActivityCreate,
+    data: ActivityCreate = Depends(form_or_json(ActivityCreate)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):

@@ -265,3 +265,114 @@ async def test_dashboard_requires_auth(client):
 async def test_dashboard(auth_client):
     resp = await auth_client.get("/")
     assert resp.status_code == 200
+
+
+# --- Form data submission tests (UI sends URLSearchParams, not JSON) ---
+
+
+@pytest.mark.asyncio
+async def test_create_plant_via_form_data(auth_client):
+    """Dashboard / plant_detail HTML forms send URLSearchParams (form-encoded), not JSON.
+    This test reproduces what the frontend actually does."""
+    resp = await auth_client.post(
+        "/api/plants/",
+        data={"name": "Monstera", "species": "Monstera deliciosa", "location": "Living room"},
+    )
+    assert resp.status_code == 201, f"Form data POST /api/plants/ got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["name"] == "Monstera"
+    assert data["species"] == "Monstera deliciosa"
+    assert data["location"] == "Living room"
+
+
+@pytest.mark.asyncio
+async def test_create_plant_via_form_data_minimal(auth_client):
+    """Minimal form data — only required fields."""
+    resp = await auth_client.post(
+        "/api/plants/",
+        data={"name": "Snake Plant"},
+    )
+    assert resp.status_code == 201, f"Minimal form data got {resp.status_code}: {resp.text}"
+    assert resp.json()["name"] == "Snake Plant"
+
+
+@pytest.mark.asyncio
+async def test_update_plant_via_form_data(auth_client):
+    """plant_detail.html saveEdit() sends PUT with URLSearchParams."""
+    # Create via JSON
+    create = await auth_client.post("/api/plants/", json={"name": "Pothos"})
+    pid = create.json()["id"]
+
+    # Update via form data (as the frontend does)
+    resp = await auth_client.put(
+        f"/api/plants/{pid}",
+        data={"name": "Golden Pothos", "location": "Kitchen shelf"},
+    )
+    assert resp.status_code == 200, f"Form data PUT /api/plants/{pid} got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["name"] == "Golden Pothos"
+    assert data["location"] == "Kitchen shelf"
+
+
+@pytest.mark.asyncio
+async def test_archive_plant_via_form_data(auth_client):
+    """plant_detail.html archivePlant() sends POST with URLSearchParams."""
+    create = await auth_client.post("/api/plants/", json={"name": "To Archive"})
+    pid = create.json()["id"]
+
+    resp = await auth_client.post(
+        f"/api/plants/{pid}/archive",
+        data={"reason": "Outgrew the shelf"},
+    )
+    assert resp.status_code == 200, f"Form data archive got {resp.status_code}: {resp.text}"
+    assert resp.json()["archived"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_task_via_form_data(auth_client):
+    """plant_detail.html addTask() sends POST with URLSearchParams."""
+    create = await auth_client.post("/api/plants/", json={"name": "Plant for Tasks"})
+    pid = create.json()["id"]
+
+    resp = await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        data={"type": "water", "label": "Water me", "interval_days": "7", "due_date": "2026-06-01"},
+    )
+    assert resp.status_code == 201, f"Form data create task got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["type"] == "water"
+    assert data["label"] == "Water me"
+
+
+@pytest.mark.asyncio
+async def test_complete_task_via_post(auth_client):
+    """plant_detail.html completeTask() sends POST with no body (empty)."""
+    create = await auth_client.post("/api/plants/", json={"name": "Plant for Complete"})
+    pid = create.json()["id"]
+
+    task_resp = await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "label": "Water", "interval_days": 7, "due_date": "2026-06-01"},
+    )
+    tid = task_resp.json()["id"]
+
+    # Empty POST (as the frontend does)
+    resp = await auth_client.post(f"/api/tasks/{tid}/complete")
+    assert resp.status_code == 200, f"Empty POST complete task got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["last_completed_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_add_activity_via_form_data(auth_client):
+    """plant_detail.html addNote() sends POST with URLSearchParams."""
+    create = await auth_client.post("/api/plants/", json={"name": "Plant for Activity"})
+    pid = create.json()["id"]
+
+    resp = await auth_client.post(
+        f"/api/plants/{pid}/activity/",
+        data={"content": "Watered and looked great!"},
+    )
+    assert resp.status_code == 201, f"Form data activity got {resp.status_code}: {resp.text}"
+    data = resp.json()
+    assert data["content"] == "Watered and looked great!"

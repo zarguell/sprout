@@ -5,6 +5,7 @@ from sqlalchemy import select
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.dependencies import form_or_json
 from app.models import Plant, User
 from app.schemas import PlantArchive, PlantCreate, PlantRead, PlantUpdate
 
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/plants", tags=["plants"])
 
 @router.post("/", response_model=PlantRead, status_code=status.HTTP_201_CREATED)
 async def create_plant(
-    data: PlantCreate,
+    data: PlantCreate = Depends(form_or_json(PlantCreate)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -63,7 +64,7 @@ async def get_plant_detail(
 @router.put("/{plant_id}", response_model=PlantRead)
 async def update_plant(
     plant_id: int,
-    data: PlantUpdate,
+    data: PlantUpdate = Depends(form_or_json(PlantUpdate)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
@@ -80,7 +81,7 @@ async def update_plant(
 @router.post("/{plant_id}/archive", response_model=PlantRead)
 async def archive_plant(
     plant_id: int,
-    data: PlantArchive,
+    data: PlantArchive = Depends(form_or_json(PlantArchive)),
     current_user: User = Depends(get_current_user),
     db=Depends(get_db),
 ):
