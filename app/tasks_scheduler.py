@@ -44,5 +44,4 @@ def start_scheduler():
     scheduler = AsyncIOScheduler()
     scheduler.add_job(run_scheduled_check, "interval", minutes=60, id="due_task_check")
     scheduler.start()
-    return scheduler</content>
-<parameter name="filePath">app/tasks_scheduler.py
+    return scheduler
