@@ -92,5 +92,5 @@ async def revoke_token(
     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
     revoked_token = RevokedToken(jti=jti, expires_at=expires_at, revoked_by=current_user.id)
     db.add(revoked_token)
-    await db.commit()</content>
-<parameter name="filePath">app/routers/users.py
+    await db.commit()
+
