@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from email.utils import formatdate, parsedate_to_datetime
@@ -20,11 +21,12 @@ async def lifespan(app: FastAPI):
     import subprocess
 
     subprocess.run(["alembic", "upgrade", "head"], check=True)
-    from app.tasks_scheduler import start_scheduler
+    from app.background import nightly_maintenance
+    from app.database import async_session
 
-    scheduler = start_scheduler()
+    task = asyncio.create_task(nightly_maintenance(async_session))
     yield
-    scheduler.shutdown()
+    task.cancel()
 
 
 app = FastAPI(title="Sprout", version="0.1.0", lifespan=lifespan)

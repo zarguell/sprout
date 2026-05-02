@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, dev]
+    tags: ['v*']
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-python@e297b23d723e19c41db3a5348b8e7d12f7774945 # v6.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Compile check
+        run: |
+          python -m py_compile app/*.py app/routers/*.py
+          echo "All files compile OK"
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short
+
+  docker:
+    needs: lint-and-test
+    uses: ./.github/workflows/docker.yml
+    secrets: inherit

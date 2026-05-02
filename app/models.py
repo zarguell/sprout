@@ -18,9 +18,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     revoked_tokens: Mapped[list["RevokedToken"]] = relationship(back_populates="revoked_by_user")
-    plants_created: Mapped[list["Plant"]] = relationship(back_populates="created_by_user")
-    tasks_created: Mapped[list["Task"]] = relationship(back_populates="created_by_user")
-    tasks_completed: Mapped[list["Task"]] = relationship(back_populates="last_completed_by_user")
+    plants_created: Mapped[list["Plant"]] = relationship(back_populates="created_by_user", foreign_keys="[Plant.created_by]")
+    tasks_created: Mapped[list["Task"]] = relationship(back_populates="created_by_user", foreign_keys="[Task.created_by]")
+    tasks_completed: Mapped[list["Task"]] = relationship(back_populates="last_completed_by_user", foreign_keys="[Task.last_completed_by]")
     photos_uploaded: Mapped[list["Photo"]] = relationship(back_populates="uploaded_by_user")
     activity_entries: Mapped[list["PlantActivity"]] = relationship(back_populates="user")
 
