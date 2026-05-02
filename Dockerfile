@@ -12,6 +12,8 @@ RUN npm run build:css
 
 FROM python:3.13-slim
 
+RUN adduser --system --group appuser
+
 WORKDIR /app
 
 COPY requirements.txt ./
@@ -25,6 +27,13 @@ COPY entrypoint.sh ./
 COPY --from=css-build /build/static/css/output.css ./static/css/output.css
 
 RUN chmod +x entrypoint.sh
+
+# Data directories owned by appuser — entrypoint.sh still creates them
+# at runtime to survive volume mounts, but permissions are preset
+RUN mkdir -p /app/data/db /app/data/photos && \
+    chown -R appuser:appuser /app/data
+
+USER appuser
 
 EXPOSE 8000
 
