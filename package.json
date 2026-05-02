@@ -1,0 +1,12 @@
+{
+  "name": "sprout",
+  "private": true,
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "@tailwindcss/cli": "^3.4.0"
+  },
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/input.css -o ./static/css/output.css --minify",
+    "dev:css": "tailwindcss -i ./src/input.css -o ./static/css/output.css --watch"
+  }
+}
