@@ -1,11 +1,14 @@
 services:
   sprout:
-    build: .
+    image: zarguell/sprout:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "8090:8000"
     volumes:
-      - ./data:/app/data
+      - sprout-data:/app/data
     env_file:
       - .env
     healthcheck:
@@ -13,3 +16,6 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  sprout-data:

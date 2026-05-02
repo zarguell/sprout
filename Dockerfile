@@ -20,10 +20,12 @@ COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
 COPY templates/ ./templates/
+COPY entrypoint.sh ./
 COPY --from=css-build /build/static/css/output.css ./static/css/output.css
 
-RUN mkdir -p /app/data/photos
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
