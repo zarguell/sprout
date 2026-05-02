@@ -376,3 +376,88 @@ async def test_add_activity_via_form_data(auth_client):
     assert resp.status_code == 201, f"Form data activity got {resp.status_code}: {resp.text}"
     data = resp.json()
     assert data["content"] == "Watered and looked great!"
+
+
+# --- Timezone safety ---
+
+
+@pytest.mark.asyncio
+async def test_plant_detail_with_naive_dates(auth_client):
+    """Regression: plant_detail_page must handle offset-naive due_date from SQLite."""
+    plant = await auth_client.post("/api/plants/", json={"name": "TZ Test"})
+    pid = plant.json()["id"]
+    # Create a task with a naive datetime (as SQLite stores it)
+    resp = await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "label": "TZ test", "interval_days": 7, "due_date": "2026-05-01"},
+    )
+    assert resp.status_code == 201
+    # Hit the HTML page route — this was crashing with 500
+    resp = await auth_client.get(f"/plants/{pid}")
+    assert resp.status_code == 200, f"plant_detail_page got {resp.status_code}: {resp.text[:200]}"
+
+
+@pytest.mark.asyncio
+async def test_dashboard_with_naive_dates(auth_client):
+    """Regression: dashboard_page must handle offset-naive due_date from SQLite."""
+    plant = await auth_client.post("/api/plants/", json={"name": "Dashboard TZ"})
+    pid = plant.json()["id"]
+    await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "label": "Dashboard task", "interval_days": 7, "due_date": "2026-05-01"},
+    )
+    resp = await auth_client.get("/")
+    assert resp.status_code == 200, f"dashboard got {resp.status_code}: {resp.text[:200]}"
+
+
+# --- Upcoming tasks endpoint ---
+
+
+@pytest.mark.asyncio
+async def test_upcoming_tasks_endpoint(auth_client):
+    plant = await auth_client.post("/api/plants/", json={"name": "Upcoming Plant"})
+    pid = plant.json()["id"]
+    # Task due today
+    await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "label": "Today task", "interval_days": 7, "due_date": "2026-05-02"},
+    )
+    # Task due in future
+    await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "fertilize", "label": "Future task", "due_date": "2026-05-10"},
+    )
+    resp = await auth_client.get("/api/tasks/upcoming?days=30")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data) == 2
+    assert data[0]["plant_name"] == "Upcoming Plant"
+
+
+@pytest.mark.asyncio
+async def test_upcoming_tasks_page_route(auth_client):
+    """The upcoming tasks HTML page at /tasks should render."""
+    plant = await auth_client.post("/api/plants/", json={"name": "Page Test"})
+    pid = plant.json()["id"]
+    await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "due_date": "2026-05-05"},
+    )
+    resp = await auth_client.get("/tasks")
+    assert resp.status_code == 200, f"/tasks page got {resp.status_code}: {resp.text[:200]}"
+    assert "upcoming" in resp.text.lower() or "tasks" in resp.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_upcoming_tasks_days_param(auth_client):
+    """Verify the days query parameter limits scope."""
+    plant = await auth_client.post("/api/plants/", json={"name": "Far Future"})
+    pid = plant.json()["id"]
+    await auth_client.post(
+        f"/api/plants/{pid}/tasks/",
+        json={"type": "water", "due_date": "2026-08-01"},
+    )
+    # With days=1, this should not appear
+    resp = await auth_client.get("/api/tasks/upcoming?days=1")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 0

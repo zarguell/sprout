@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Upcoming Tasks — Sprout{% endblock %}
+{% block head_extra %}
+<script id="tasks-data" type="application/json">{{ tasks | tojson }}</script>
+{% endblock %}
+{% block content %}
+<div x-data="upcomingData()">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Upcoming Tasks</h1>
+
+    <template x-for="section in sections" :key="section.key">
+        <div class="mb-8">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3" x-text="section.label"></h2>
+            <div x-show="section.tasks.length === 0" class="text-gray-400 text-sm">No tasks</div>
+            <div class="grid gap-3">
+                <template x-for="task in section.tasks" :key="task.id">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <a :href="'/plants/' + task.plant_id" class="text-emerald-700 hover:text-emerald-900 font-medium" x-text="task.plant_name"></a>
+                            <span class="text-gray-400">·</span>
+                            <span x-text="taskIcon(task.type)"></span>
+                            <span x-text="task.label"></span>
+                            <span class="text-gray-400">·</span>
+                            <span class="text-sm text-gray-500" x-text="formatDate(task.due_date)"></span>
+                            <template x-if="task.interval_days">
+                                <span class="text-xs text-gray-400" x-text="recurrenceText(task.interval_days)"></span>
+                            </template>
+                            <template x-if="task.is_overdue && task.days_overdue > 0">
+                                <span class="text-xs rounded-full px-2 py-0.5" :class="overdueBadgeClass(task.days_overdue)" x-text="task.days_overdue + 'd overdue'"></span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </template>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function upcomingData() {
+    const raw = JSON.parse(document.getElementById('tasks-data').textContent);
+    return {
+        tasks: raw,
+        get sections() {
+            const overdue = this.tasks.filter(t => t.days_overdue >= 3);
+            const overdue1 = this.tasks.filter(t => t.days_overdue === 1 || t.days_overdue === 2);
+            const today = this.tasks.filter(t => t.days_overdue === 0 && !t.is_overdue || t.is_overdue && t.days_overdue === 0);
+            const tomorrow = this.tasks.filter(t => t.days_overdue === -1);
+            const week = this.tasks.filter(t => t.days_overdue <= -2 && t.days_overdue >= -7);
+            const later = this.tasks.filter(t => t.days_overdue < -7 && t.days_overdue >= -30);
+            return [
+                { key: 'overdue3', label: 'Overdue 3+ days', tasks: overdue },
+                { key: 'overdue12', label: 'Overdue 1-2 days', tasks: overdue1 },
+                { key: 'today', label: 'Due today', tasks: today },
+                { key: 'tomorrow', label: 'Tomorrow', tasks: tomorrow },
+                { key: 'week', label: 'This Week', tasks: week },
+                { key: 'later', label: 'Later', tasks: later }
+            ];
+        },
+        taskIcon(type) {
+            return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
+        },
+        recurrenceText(days) {
+            if (days === 7) return 'Weekly';
+            if (days === 14) return 'Biweekly';
+            if (days === 30) return 'Monthly';
+            return 'Every ' + days + ' days';
+        },
+        formatDate(iso) {
+            const d = new Date(iso);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        },
+        overdueBadgeClass(days) {
+            return days >= 3 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+        }
+    };
+}
+</script>
+{% endblock %}

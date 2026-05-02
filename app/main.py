@@ -1,7 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import formatdate, parsedate_to_datetime
 
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
@@ -17,6 +17,13 @@ from app.database import get_db
 from app.models import Plant, Task, User
 from app.routers import activity, photos, plants, tasks, users
 from app.schemas import TaskDueRead
+
+
+def _ensure_tz(dt: datetime) -> datetime:
+    """If dt is offset-naive, assume UTC."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 @asynccontextmanager
@@ -86,9 +93,7 @@ async def list_due_tasks(
     due_tasks = []
     latest = now
     for t, p in rows:
-        dd = t.due_date
-        if dd.tzinfo is None:
-            dd = dd.replace(tzinfo=timezone.utc)
+        dd = _ensure_tz(t.due_date)
         days = max(0, (now - dd).days)
         due_tasks.append(
             TaskDueRead(
@@ -140,7 +145,8 @@ async def list_upcoming_tasks(
     upcoming_tasks = []
     latest = now
     for t, p in rows:
-        delta = (t.due_date - now).days
+        dd = _ensure_tz(t.due_date)
+        delta = (dd - now).days
         days_until = max(0, -delta) if delta < 0 else delta
         upcoming_tasks.append(
             TaskDueRead(
@@ -150,12 +156,12 @@ async def list_upcoming_tasks(
                 location=p.location,
                 type=t.type,
                 label=t.label,
-                due_date=t.due_date,
+                due_date=dd,
                 days_overdue=max(0, -delta),
             )
         )
-        if t.due_date > latest:
-            latest = t.due_date
+        if dd > latest:
+            latest = dd
     if not rows:
         latest = now
     lm = formatdate(latest.timestamp(), usegmt=True)
@@ -164,7 +170,7 @@ async def list_upcoming_tasks(
         if parsedate_to_datetime(ims) >= latest:
             return Response(status_code=304)
     return JSONResponse(
-        content=[t.model_dump() for t in upcoming_tasks],
+        content=[t.model_dump(mode="json") for t in upcoming_tasks],
         headers={"Last-Modified": lm},
     )
 
@@ -223,12 +229,14 @@ async def dashboard_page(request: Request, current_user: User = Depends(get_curr
             "next_task": None,
         }
         if next_task:
-            days_overdue = max(0, (now - next_task.due_date).days)
+            dd = _ensure_tz(next_task.due_date)
+            days_overdue = max(0, (now - dd).days)
             entry["next_task"] = {
                 "type": next_task.type,
                 "label": next_task.label,
-                "due_date": next_task.due_date.isoformat(),
+                "due_date": dd.isoformat(),
                 "days_overdue": days_overdue,
+                "interval_days": next_task.interval_days,
             }
         plant_data.append(entry)
 
@@ -293,14 +301,15 @@ async def plant_detail_page(
     )
     tasks_list = []
     for t in task_result.scalars().all():
-        days_overdue = max(0, (now - t.due_date).days)
+        dd = _ensure_tz(t.due_date)
+        days_overdue = max(0, (now - dd).days)
         tasks_list.append({
             "id": t.id,
             "type": t.type,
             "label": t.label,
             "interval_days": t.interval_days,
-            "due_date": t.due_date.isoformat(),
-            "is_overdue": t.due_date < now,
+            "due_date": dd.isoformat(),
+            "is_overdue": dd < now,
             "days_overdue": days_overdue,
         })
 
@@ -353,3 +362,47 @@ async def plant_detail_page(
             "activity": activity_list,
         },
     )
+
+
+# --- Upcoming Tasks / Calendar View ---
+
+
+@app.get("/tasks")
+async def upcoming_tasks_page(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """HTML page showing upcoming and overdue tasks grouped by date."""
+    now = datetime.now(timezone.utc)
+
+    # Fetch upcoming tasks (next 30 days)
+    horizon = now + timedelta(days=30)
+    result = await db.execute(
+        select(Task, Plant)
+        .join(Plant)
+        .where(
+            Task.is_active == True,
+            Plant.archived == False,
+            Task.due_date <= horizon,
+        )
+        .order_by(Task.due_date, Plant.name)
+    )
+    rows = result.all()
+
+    tasks_data = []
+    for t, p in rows:
+        dd = _ensure_tz(t.due_date)
+        tasks_data.append({
+            "id": t.id,
+            "plant_id": p.id,
+            "plant_name": p.name,
+            "type": t.type,
+            "label": t.label,
+            "interval_days": t.interval_days,
+            "due_date": dd.isoformat(),
+            "days_overdue": max(0, (now - dd).days),
+            "is_overdue": dd < now,
+        })
+
+    return templates.TemplateResponse(request, "upcoming_tasks.html", {"tasks": tasks_data})

@@ -84,6 +84,7 @@
                                 <span x-text="plant.next_task.label || plant.next_task.type"></span>
                                 <span x-show="plant.next_task.days_overdue > 0" x-text="' · ' + plant.next_task.days_overdue + 'd overdue'"></span>
                                 <span x-show="plant.next_task.days_overdue <= 0" x-text="' · due ' + new Date(plant.next_task.due_date).toLocaleDateString()"></span>
+                                <span x-show="plant.next_task.interval_days" x-text="' · ' + recurrenceLabel(plant.next_task.interval_days)"></span>
                             </span>
                         </div>
                     </template>
@@ -117,6 +118,10 @@ function dashData() {
             const t = plant.next_task;
             if (!t || t.days_overdue <= 0) return '';
             return t.days_overdue >= 3 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+        },
+        recurrenceLabel(days) {
+            const labels = { 7: 'weekly', 14: 'biweekly', 30: 'monthly' };
+            return labels[days] || `every ${days} days`;
         }
     };
 }

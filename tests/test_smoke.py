@@ -200,3 +200,46 @@ class TestTemplates:
         assert data[0]["name"] == "Dead Plant"
 
         assert "function archiveData()" in result
+
+
+    def test_upcoming_tasks_renders_valid_html(self):
+        """Upcoming tasks template must render with valid JSON data."""
+        from fastapi.templating import Jinja2Templates
+        import json
+        import re
+
+        templates = Jinja2Templates(directory=str(APP_DIR.parent / "templates"))
+        env = templates.env
+        template = env.get_template("upcoming_tasks.html")
+
+        tasks = [
+            {
+                "id": 1, "plant_id": 1, "plant_name": "Monstera",
+                "type": "water", "label": "Water", "interval_days": 7,
+                "due_date": "2026-05-02T00:00:00", "days_overdue": 0, "is_overdue": False,
+            },
+            {
+                "id": 2, "plant_id": 2, "plant_name": "Cactus",
+                "type": "fertilize", "label": "Feed", "interval_days": None,
+                "due_date": "2026-04-28T00:00:00", "days_overdue": 4, "is_overdue": True,
+            },
+        ]
+
+        result = template.render(tasks=tasks)
+
+        # Script data tag must contain valid JSON
+        m = re.search(
+            r'<script id="tasks-data" type="application/json">(.*?)</script>',
+            result, re.DOTALL
+        )
+        assert m, "Missing tasks-data script tag in upcoming_tasks.html"
+        data = json.loads(m.group(1))
+        assert len(data) == 2
+        assert data[0]["plant_name"] == "Monstera"
+        assert data[1]["interval_days"] is None
+
+        # Must have Alpine data function
+        assert "function upcomingData()" in result, "Missing upcomingData() function"
+
+        # Must have task grouping sections
+        assert "Overdue" in result or "overdue" in result

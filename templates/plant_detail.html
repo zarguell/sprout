@@ -97,6 +97,8 @@
                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
             <input x-model="taskForm.due_date" type="date"
                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <input type="number" x-model="taskForm.interval_days" placeholder="Every N days (optional)"
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
             <div class="flex justify-end gap-2">
                 <button @click="showAddTask = false" class="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
                 <button @click="addTask()" :disabled="!taskForm.due_date || saving"
@@ -116,6 +118,7 @@
                     <span x-text="taskIcon(task.type)"></span>
                     <span class="text-sm text-gray-700" x-text="task.label || task.type"></span>
                     <span class="text-xs text-gray-400" x-text="new Date(task.due_date).toLocaleDateString()"></span>
+                    <span x-show="task.interval_days" class="text-xs text-blue-500" x-text="recurrenceLabel(task.interval_days)"></span>
                 </div>
                 <button @click="completeTask(task.id)" class="text-xs text-emerald-600 hover:text-emerald-800 font-medium">
                     Complete
@@ -171,13 +174,35 @@
     <!-- Photos Section -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-4">Photos</h2>
+        <div x-show="!uploadPreview" class="mb-4 flex gap-3">
+            <input type="file" x-ref="photoInput" @change="handlePhotoUpload($event)" accept="image/*"
+                   class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+        </div>
+        <div x-show="uploadPreview" class="mb-4">
+            <img :src="uploadPreview" class="h-32 w-auto rounded mb-2">
+            <input type="text" x-model="uploadCaption" placeholder="Caption (optional)"
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-2">
+            <div class="flex gap-2">
+                <button @click="submitPhoto()" :disabled="uploading"
+                        class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+                    <span x-show="!uploading">Upload</span>
+                    <span x-show="uploading">Uploading…</span>
+                </button>
+                <button @click="cancelUpload()" class="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
+            </div>
+        </div>
         <template x-if="photos.length === 0">
             <p class="text-gray-400 text-sm">No photos yet.</p>
         </template>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <template x-for="photo in photos" :key="photo.id">
-                <div class="rounded-md overflow-hidden bg-gray-100">
-                    <img :src="photo.url" class="w-full h-40 object-cover" alt="">
+                <div class="rounded-md overflow-hidden bg-gray-100 relative">
+                    <img :src="photo.url" class="w-full h-40 object-cover" :class="{ 'opacity-60': photo.is_primary }" alt="">
+                    <span x-show="photo.is_primary" class="absolute top-1 left-1 bg-emerald-600 text-white text-xs px-1.5 py-0.5 rounded">Primary</span>
+                    <button x-show="!photo.is_primary" @click="setPrimaryPhoto(photo.id)"
+                            class="absolute top-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded hover:bg-black/70">
+                        Set as Primary
+                    </button>
                 </div>
             </template>
         </div>
@@ -197,8 +222,11 @@ function plantDetailData() {
         showAddActivity: false,
         saving: false,
         editForm: { name: '', species: '', location: '', notes: '' },
-        taskForm: { type: 'water', label: '', due_date: '' },
+        taskForm: { type: 'water', label: '', due_date: '', interval_days: '' },
         activityForm: { type: 'water', notes: '' },
+        uploadCaption: '',
+        uploadPreview: null,
+        uploading: false,
         init() {
             this.editForm = {
                 name: this.plant.name || '',
@@ -225,6 +253,7 @@ function plantDetailData() {
             body.set('type', this.taskForm.type);
             body.set('due_date', this.taskForm.due_date);
             if (this.taskForm.label) body.set('label', this.taskForm.label);
+            if (this.taskForm.interval_days) body.set('interval_days', this.taskForm.interval_days);
             const res = await fetch('/api/plants/' + this.plant.id + '/tasks', { method: 'POST', body });
             if (res.ok) location.reload();
             this.saving = false;
@@ -247,6 +276,37 @@ function plantDetailData() {
         },
         activityIcon(type) {
             return { water: '💧', fertilize: '🧪', repot: '🪴', prune: '✂️', note: '📝' }[type] || '📝';
+        },
+        async handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.uploadPreview = URL.createObjectURL(file);
+            this.uploadCaption = '';
+        },
+        async submitPhoto() {
+            const file = this.$refs.photoInput.files[0];
+            if (!file) return;
+            this.uploading = true;
+            const body = new FormData();
+            body.set('file', file);
+            if (this.uploadCaption) body.set('caption', this.uploadCaption);
+            const res = await fetch('/api/plants/' + this.plant.id + '/photos/', { method: 'POST', body });
+            this.uploading = false;
+            if (res.ok) location.reload();
+        },
+        async setPrimaryPhoto(photoId) {
+            const res = await fetch('/api/plants/' + this.plant.id + '/photos/' + photoId + '/set-primary', { method: 'POST' });
+            if (res.ok) location.reload();
+        },
+        cancelUpload() {
+            this.uploadPreview = null;
+            this.$refs.photoInput.value = '';
+        },
+        recurrenceLabel(interval) {
+            if (interval === 7) return 'Weekly';
+            if (interval === 14) return 'Biweekly';
+            if (interval === 30) return 'Monthly';
+            return 'Every ' + interval + ' days';
         }
     };
 }
