@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Sprout{% endblock %}
+{% block content %}
+<div x-data="{
+    plants: {{ plants | tojson }},
+    showAdd: false,
+    form: { name: '', species: '', location: '', notes: '' },
+    saving: false,
+    async addPlant() {
+        this.saving = true;
+        const body = new URLSearchParams();
+        for (const [k, v] of Object.entries(this.form)) if (v) body.set(k, v);
+        const res = await fetch('/api/plants', { method: 'POST', body });
+        if (res.ok) location.reload();
+        this.saving = false;
+    },
+    taskIcon(type) {
+        return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
+    },
+    overdueClass(plant) {
+        const t = plant.next_task;
+        if (!t || t.days_overdue <= 0) return '';
+        return t.days_overdue >= 3 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+    }
+}">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">My Plants</h1>
+        <button @click="showAdd = true"
+                class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700">
+            + Add Plant
+        </button>
+    </div>
+
+    <!-- Add Plant Modal -->
+    <div x-show="showAdd" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+         @click.self="showAdd = false">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-lg font-semibold mb-4">Add Plant</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input x-model="form.name" required
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                    <input x-model="form.species"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input x-model="form.location"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea x-model="form.notes" rows="2"
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button @click="showAdd = false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                <button @click="addPlant()" :disabled="!form.name || saving"
+                        class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+                    <span x-show="!saving">Add</span>
+                    <span x-show="saving">Saving…</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="plants.length === 0" class="text-center py-16">
+        <div class="text-5xl mb-4">🌱</div>
+        <p class="text-gray-500">No plants yet. Add your first plant!</p>
+    </div>
+
+    <!-- Plant Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="plant in plants" :key="plant.id">
+            <a :href="'/plants/' + plant.id"
+               class="block bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-200 overflow-hidden">
+                <!-- Thumbnail -->
+                <div class="h-40 bg-emerald-50 flex items-center justify-center">
+                    <template x-if="plant.thumbnail_url">
+                        <img :src="plant.thumbnail_url" class="h-full w-full object-cover" alt="">
+                    </template>
+                    <template x-if="!plant.thumbnail_url">
+                        <span class="text-4xl text-emerald-300">🌿</span>
+                    </template>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900" x-text="plant.name"></h3>
+                    <p x-show="plant.location" class="text-sm text-gray-500 mt-0.5" x-text="plant.location"></p>
+                    <!-- Next Task -->
+                    <template x-if="plant.next_task">
+                        <div class="mt-2">
+                            <span class="inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5"
+                                  :class="overdueClass(plant)">
+                                <span x-text="taskIcon(plant.next_task.type)"></span>
+                                <span x-text="plant.next_task.label || plant.next_task.type"></span>
+                                <span x-show="plant.next_task.days_overdue > 0" x-text="' · ' + plant.next_task.days_overdue + 'd overdue'"></span>
+                                <span x-show="plant.next_task.days_overdue <= 0" x-text="' · due ' + new Date(plant.next_task.due_date).toLocaleDateString()"></span>
+                            </span>
+                        </div>
+                    </template>
+                </div>
+            </a>
+        </template>
+    </div>
+</div>
+{% endblock %}

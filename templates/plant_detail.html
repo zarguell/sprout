@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}{{ plant.name }} — Sprout{% endblock %}
+{% block content %}
+<div x-data="{
+    plant: {{ plant | tojson }},
+    tasks: {{ tasks | tojson }},
+    photos: {{ photos | tojson }},
+    activity: {{ activity | tojson }},
+    // Edit plant
+    editing: false,
+    editForm: {},
+    startEdit() { this.editForm = { ...this.plant }; this.editing = true; },
+    async saveEdit() {
+        const body = new URLSearchParams();
+        for (const [k, v] of Object.entries(this.editForm)) body.set(k, v);
+        const res = await fetch('/api/plants/' + this.plant.id, { method: 'PUT', body });
+        if (res.ok) location.reload();
+    },
+    // Archive
+    showArchive: false,
+    archiveReason: '',
+    async archivePlant() {
+        const body = new URLSearchParams({ reason: this.archiveReason });
+        const res = await fetch('/api/plants/' + this.plant.id + '/archive', { method: 'POST', body });
+        if (res.ok) location.reload();
+    },
+    async unarchivePlant() {
+        const res = await fetch('/api/plants/' + this.plant.id + '/unarchive', { method: 'POST' });
+        if (res.ok) location.reload();
+    },
+    // Delete
+    showDelete: false,
+    async deletePlant() {
+        const res = await fetch('/api/plants/' + this.plant.id, { method: 'DELETE' });
+        if (res.ok) location.href = '/';
+    },
+    // Tasks
+    showAddTask: false,
+    taskForm: { type: 'water', label: '', interval_days: 7, due_date: new Date(Date.now() + 7*86400000).toISOString().slice(0,10) },
+    async addTask() {
+        const body = new URLSearchParams();
+        for (const [k, v] of Object.entries(this.taskForm)) body.set(k, v);
+        const res = await fetch('/api/plants/' + this.plant.id + '/tasks', { method: 'POST', body });
+        if (res.ok) location.reload();
+    },
+    async completeTask(taskId) {
+        const res = await fetch('/api/plants/' + this.plant.id + '/tasks/' + taskId + '/complete', { method: 'POST' });
+        if (res.ok) location.reload();
+    },
+    async deleteTask(taskId) {
+        const res = await fetch('/api/plants/' + this.plant.id + '/tasks/' + taskId, { method: 'DELETE' });
+        if (res.ok) location.reload();
+    },
+    // Photos
+    showUpload: false,
+    uploadCaption: '',
+    async uploadPhoto() {
+        const input = document.getElementById('photo-input');
+        if (!input.files[0]) return;
+        const fd = new FormData();
+        fd.append('file', input.files[0]);
+        if (this.uploadCaption) fd.append('caption', this.uploadCaption);
+        const res = await fetch('/api/plants/' + this.plant.id + '/photos', { method: 'POST', body: fd });
+        if (res.ok) location.reload();
+    },
+    async setPrimary(photoId) {
+        const res = await fetch('/api/plants/' + this.plant.id + '/photos/' + photoId + '/set-primary', { method: 'POST' });
+        if (res.ok) location.reload();
+    },
+    async deletePhoto(photoId) {
+        if (!confirm('Delete this photo?')) return;
+        const res = await fetch('/api/plants/' + this.plant.id + '/photos/' + photoId, { method: 'DELETE' });
+        if (res.ok) location.reload();
+    },
+    // Lightbox
+    lightboxUrl: null,
+    openLightbox(url) { this.lightboxUrl = url; },
+    // Activity
+    noteContent: '',
+    async addNote() {
+        if (!this.noteContent.trim()) return;
+        const body = new URLSearchParams({ content: this.noteContent });
+        const res = await fetch('/api/plants/' + this.plant.id + '/activity', { method: 'POST', body });
+        if (res.ok) location.reload();
+    },
+    // Helpers
+    taskIcon(type) {
+        return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
+    },
+    formatDate(d) {
+        if (!d) return '';
+        return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    },
+    relativeDate(d) {
+        if (!d) return '';
+        const diff = Math.floor((new Date(d) - new Date()) / 86400000);
+        if (diff < 0) return Math.abs(diff) + 'd overdue';
+        if (diff === 0) return 'Today';
+        if (diff === 1) return 'Tomorrow';
+        return 'in ' + diff + 'd';
+    }
+}">
+
+    <!-- Archived Banner -->
+    <div x-show="plant.archived" x-cloak
+         class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+        <div>
+            <span class="font-medium text-amber-800">Archived</span>
+            <span x-show="plant.archived_reason" class="text-amber-700 text-sm ml-2"
+                  x-text="' — ' + plant.archived_reason"></span>
+            <span x-show="plant.archived_at" class="text-amber-600 text-sm ml-2"
+                  x-text="formatDate(plant.archived_at)"></span>
+        </div>
+        <button @click="unarchivePlant()"
+                class="bg-emerald-600 text-white px-3 py-1 rounded text-sm hover:bg-emerald-700">
+            Restore
+        </button>
+    </div>
+
+    <!-- Plant Header -->
+    <div class="flex items-start justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900" x-text="plant.name"></h1>
+            <div class="text-sm text-gray-500 mt-1 space-x-3">
+                <span x-show="plant.species" x-text="plant.species"></span>
+                <span x-show="plant.location">📍 <span x-text="plant.location"></span></span>
+            </div>
+            <p x-show="plant.notes" class="text-sm text-gray-600 mt-2" x-text="plant.notes"></p>
+        </div>
+        <div class="flex gap-2">
+            <button @click="startEdit()" x-show="!plant.archived"
+                    class="text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded px-3 py-1.5">
+                Edit
+            </button>
+            <button @click="showArchive = true" x-show="!plant.archived"
+                    class="text-sm text-amber-700 hover:text-amber-800 border border-amber-300 rounded px-3 py-1.5">
+                Archive
+            </button>
+            <button @click="showDelete = true"
+                    class="text-sm text-red-600 hover:text-red-700 border border-red-300 rounded px-3 py-1.5">
+                Delete
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div x-show="editing" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+         @click.self="editing = false">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-lg font-semibold mb-4">Edit Plant</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input x-model="editForm.name"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                    <input x-model="editForm.species"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input x-model="editForm.location"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea x-model="editForm.notes" rows="2"
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button @click="editing = false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                <button @click="saveEdit()"
+                        class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700">
+                    Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Archive Modal -->
+    <div x-show="showArchive" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+         @click.self="showArchive = false">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h2 class="text-lg font-semibold mb-2">Archive Plant</h2>
+            <p class="text-sm text-gray-500 mb-4">Archived plants keep their data but hide from the dashboard.</p>
+            <input x-model="archiveReason" placeholder="Reason (optional)"
+                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <div class="flex justify-end gap-2">
+                <button @click="showArchive = false" class="px-4 py-2 text-sm text-gray-600">Cancel</button>
+                <button @click="archivePlant()"
+                        class="bg-amber-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-amber-700">
+                    Archive
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div x-show="showDelete" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+         @click.self="showDelete = false">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-sm p-6">
+            <h2 class="text-lg font-semibold text-red-700 mb-2">Delete Plant</h2>
+            <p class="text-sm text-gray-600 mb-4">This will permanently delete the plant, all its tasks, photos, and activity. This cannot be undone.</p>
+            <div class="flex justify-end gap-2">
+                <button @click="showDelete = false" class="px-4 py-2 text-sm text-gray-600">Cancel</button>
+                <button @click="deletePlant()"
+                        class="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700">
+                    Delete forever
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div x-show="lightboxUrl" x-cloak class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+         @click="lightboxUrl = null">
+        <img :src="lightboxUrl" class="max-w-full max-h-full rounded-lg shadow-2xl" @click.stop>
+        <button @click="lightboxUrl = null"
+                class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300">&times;</button>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Photos + Tasks -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Photo Gallery -->
+            <section>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-gray-900">Photos</h2>
+                    <button x-show="!plant.archived" @click="showUpload = true"
+                            class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">+ Upload</button>
+                </div>
+
+                <!-- Upload Form -->
+                <div x-show="showUpload" x-cloak class="bg-gray-50 rounded-lg p-4 mb-3 space-y-2">
+                    <input id="photo-input" type="file" accept="image/*" class="block text-sm text-gray-500">
+                    <input x-model="uploadCaption" placeholder="Caption (optional)"
+                           class="block w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                    <div class="flex gap-2">
+                        <button @click="uploadPhoto()"
+                                class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm hover:bg-emerald-700">Upload</button>
+                        <button @click="showUpload = false" class="text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Thumbnails Row -->
+                <div class="flex gap-2 overflow-x-auto pb-2" x-show="photos.length > 0">
+                    <template x-for="photo in photos" :key="photo.id">
+                        <div class="relative flex-shrink-0 group">
+                            <img :src="'/api/plants/' + plant.id + '/photos/' + photo.id + '/thumbnail'"
+                                 @click="openLightbox('/api/plants/' + plant.id + '/photos/' + photo.id + '/file')"
+                                 class="h-24 w-24 object-cover rounded cursor-pointer hover:ring-2 hover:ring-emerald-400">
+                            <span x-show="photo.is_primary" class="absolute top-0 left-0 bg-emerald-600 text-white text-[10px] px-1 rounded-br">★</span>
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] px-1 truncate hidden group-hover:block">
+                                <button @click.stop="setPrimary(photo.id)" class="hover:underline mr-2">Set primary</button>
+                                <button @click.stop="deletePhoto(photo.id)" class="hover:underline text-red-300">Delete</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <p x-show="photos.length === 0" class="text-sm text-gray-400">No photos yet.</p>
+            </section>
+
+            <!-- Tasks -->
+            <section x-show="!plant.archived">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+                    <button @click="showAddTask = !showAddTask"
+                            class="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                        <span x-text="showAddTask ? '−' : '+'"></span> Add Task
+                    </button>
+                </div>
+
+                <!-- Add Task Form -->
+                <div x-show="showAddTask" x-cloak class="bg-gray-50 rounded-lg p-4 mb-3 space-y-2">
+                    <div class="flex gap-2">
+                        <select x-model="taskForm.type"
+                                class="border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+                            <option value="water">💧 Water</option>
+                            <option value="fertilize">🧪 Fertilize</option>
+                            <option value="repot">🪴 Repot</option>
+                            <option value="custom">📋 Custom</option>
+                        </select>
+                        <input x-model="taskForm.label" placeholder="Description"
+                               class="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                        <input x-model.number="taskForm.interval_days" type="number" min="1" placeholder="Days"
+                               class="w-20 border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+                        <input x-model="taskForm.due_date" type="date"
+                               class="border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+                    </div>
+                    <button @click="addTask()"
+                            class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm hover:bg-emerald-700">Add</button>
+                </div>
+
+                <!-- Task List -->
+                <div class="space-y-2">
+                    <template x-for="task in tasks" :key="task.id">
+                        <div class="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-3">
+                            <div class="flex items-center gap-3">
+                                <button @click="completeTask(task.id)"
+                                        class="text-lg hover:scale-110 transition-transform" title="Complete">✅</button>
+                                <span x-text="taskIcon(task.type)" class="text-lg"></span>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">
+                                        <span x-text="task.label || task.type"></span>
+                                        <span x-show="task.interval_days" class="text-gray-400 font-normal ml-1"
+                                              x-text="'· every ' + task.interval_days + 'd'"></span>
+                                    </div>
+                                    <div class="text-xs text-gray-500"
+                                         :class="task.is_overdue ? (task.days_overdue >= 3 ? 'text-red-600 font-medium' : 'text-amber-600') : ''"
+                                         x-text="relativeDate(task.due_date)"></div>
+                                </div>
+                            </div>
+                            <button @click="deleteTask(task.id)" class="text-gray-400 hover:text-red-500 text-sm" title="Delete">✕</button>
+                        </div>
+                    </template>
+                    <p x-show="tasks.length === 0" class="text-sm text-gray-400">No tasks.</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- Right Column: Activity Log -->
+        <div>
+            <section>
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Activity</h2>
+
+                <!-- Add Note -->
+                <div class="mb-4 flex gap-2">
+                    <input x-model="noteContent" @keydown.enter="addNote()"
+                           placeholder="Add a note…"
+                           class="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <button @click="addNote()"
+                            class="bg-emerald-600 text-white px-3 py-2 rounded-md text-sm hover:bg-emerald-700">Post</button>
+                </div>
+
+                <!-- Activity Timeline -->
+                <div class="space-y-3 max-h-96 overflow-y-auto">
+                    <template x-for="entry in activity" :key="entry.id">
+                        <div class="border-l-2 border-emerald-200 pl-3">
+                            <div class="text-sm text-gray-800" x-text="entry.content"></div>
+                            <div class="text-xs text-gray-400 mt-0.5">
+                                <span x-text="entry.user?.display_name || entry.user?.username || 'Unknown'"></span>
+                                · <span x-text="formatDate(entry.created_at)"></span>
+                            </div>
+                        </div>
+                    </template>
+                    <p x-show="activity.length === 0" class="text-sm text-gray-400">No activity yet.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+{% endblock %}

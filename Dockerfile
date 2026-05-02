@@ -9,7 +9,7 @@ COPY src/input.css ./src/input.css
 RUN npm install
 RUN npm run build:css
 
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -19,7 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+COPY templates/ ./templates/
 COPY --from=css-build /build/static/css/output.css ./static/css/output.css
+
+RUN mkdir -p /app/data/photos
 
 EXPOSE 8000
 
