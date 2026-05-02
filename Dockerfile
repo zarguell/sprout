@@ -5,6 +5,7 @@ WORKDIR /build
 COPY package.json ./
 COPY tailwind.config.js ./
 COPY src/input.css ./src/input.css
+COPY templates/ ./templates/
 
 RUN npm install
 RUN npm run build:css
