@@ -6,6 +6,8 @@ from email.utils import formatdate, parsedate_to_datetime
 
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -31,6 +33,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Sprout", version="0.1.0", lifespan=lifespan)
+
+
+# Redirect unauthenticated browser requests to /login
+class AuthRedirectMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        if response.status_code == 401 and "text/html" in request.headers.get("accept", ""):
+            return RedirectResponse(url="/login", status_code=302)
+        return response
+
+
+app.add_middleware(AuthRedirectMiddleware)
 
 # Static files (CSS) — no auth required
 if os.path.isdir("static"):
