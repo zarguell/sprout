@@ -92,8 +92,8 @@ app/
 │   ├── tasks.py          # Task management
 │   ├── activity.py       # Activity log
 │   ├── photos.py         # Photo uploads
-│   └── users.py          # Auth (register, login, token)
-templates/                # Jinja2 templates (JinjaX components)
+│   └── users.py          # User profile + auth (login, token)
+templates/                # Jinja2 templates (no JinjaX components)
 static/
   css/
     output.css            # Generated Tailwind CSS (gitignored)
@@ -156,7 +156,7 @@ The `TaskComplete` schema has no required fields (empty body). The
 
 ### Auth
 
-- JWT-based. Token returned on login at `POST /api/login`.
+- JWT-based. Token returned on login at `POST /api/auth/token` (OAuth2 password flow).
 - Login endpoint uses FastAPI's `OAuth2PasswordRequestForm` (form data only,
   by design — it's called from the Swagger UI and the HTML login form).
 - Protected endpoints use `Depends(get_current_user)`.

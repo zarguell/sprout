@@ -218,7 +218,7 @@ No structural gradient tokens. Surface hierarchy is solid-color-block throughout
 - Background: `#ffffff`
 - Shadow: `0 1px 3px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.06), 0 0 2px rgba(0,0,0,0.07)`
 - Left: Sprout logo/wordmark
-- Center: nav links (Dashboard, Archive)
+- Center: nav links (Dashboard, Tasks, Archive)
 - Right: user avatar + dropdown
 
 ### Image Treatment

@@ -76,6 +76,7 @@ sprout/
 │       ├── dashboard.html
 │       ├── archive.html
 │       ├── plant_detail.html
+│       ├── upcoming_tasks.html
 │       └── login.html
 ├── static/
 │   └── css/
@@ -467,6 +468,7 @@ For local development, `npm run dev:css` watches for changes. The app serves `/s
 | `GET /` | `dashboard.html` | Card grid of active plants, overdue badges, recent activity |
 | `GET /archive` | `archive.html` | Grid of archived plants, sortable by archive date |
 | `GET /plants/{id}` | `plant_detail.html` | Full plant detail: photo history, task list, notes |
+| `GET /tasks` | `upcoming_tasks.html` | Tasks grouped by urgency (overdue, today, this week, later) |
 | `GET /login` | `login.html` | Login form |
 
 ### Dashboard (`/`)

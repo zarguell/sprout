@@ -11,7 +11,7 @@ Built with FastAPI, SQLite, Tailwind CSS, and Alpine.js. Single Docker container
 - **Photo gallery** — Upload photos with auto-generated thumbnails, set a primary photo, lightbox viewer
 - **Activity log** — Append-only notes per plant with timestamps
 - **Overdue alerts** — Dashboard badges highlight overdue tasks (amber < 3 days, red ≥ 3 days)
-- **Background scheduler** — Hourly check for due tasks
+- **Background maintenance** — Nightly job (02:00 UTC) prunes expired tokens and deactivates tasks for archived plants
 - **Integration API** — Poll `/api/tasks/due` with `Last-Modified`/`If-Modified-Since` for external automations
 - **Multi-user** — JWT auth with httpOnly cookies (browser) and Bearer tokens (agents/CLI)
 - **Service tokens** — Long-lived tokens for integrations, generated via CLI
@@ -41,7 +41,7 @@ volumes:
 Create `.env`:
 
 ```bash
-JWT_SECRET=changeme  # generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
+JWT_SECRET=***  # generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 Then start:
@@ -80,7 +80,7 @@ All API routes are under `/api/`. Full docs at `/docs` (Swagger UI) when the app
 |--------|------|-------------|
 | `POST` | `/api/auth/token` | Login (sets httpOnly cookie) |
 | `POST` | `/api/auth/revoke` | Logout |
-| `GET` | `/api/plants/` | List plants (paginated) |
+| `GET` | `/api/plants/` | List active plants (`?location=` filter) |
 | `POST` | `/api/plants/` | Create plant |
 | `GET` | `/api/plants/{id}` | Get plant details |
 | `PUT` | `/api/plants/{id}` | Update plant |
@@ -88,12 +88,15 @@ All API routes are under `/api/`. Full docs at `/docs` (Swagger UI) when the app
 | `POST` | `/api/plants/{id}/unarchive` | Restore plant |
 | `DELETE` | `/api/plants/{id}` | Hard delete |
 | `POST` | `/api/plants/{id}/tasks/` | Create task |
-| `POST` | `/api/plants/{id}/tasks/{id}/complete` | Complete task (advances recurring) |
+| `POST` | `/api/tasks/{id}/complete` | Complete task (advances recurring) |
+| `PUT` | `/api/tasks/{id}` | Update task |
+| `DELETE` | `/api/tasks/{id}` | Delete task |
+| `GET` | `/api/tasks/due` | Poll due tasks (supports `If-Modified-Since`) |
+| `GET` | `/api/tasks/upcoming` | Tasks due within `?days=N` (default 3) |
 | `POST` | `/api/plants/{id}/photos/` | Upload photo |
 | `GET` | `/api/plants/{id}/photos/{id}/file` | Get full photo (authenticated) |
 | `GET` | `/api/plants/{id}/photos/{id}/thumbnail` | Get thumbnail (authenticated) |
 | `POST` | `/api/plants/{id}/activity/` | Add activity note |
-| `GET` | `/api/tasks/due` | Poll due tasks (supports `If-Modified-Since`) |
 | `GET` | `/health` | Health check |
 
 ### Integration polling
@@ -105,7 +108,7 @@ GET /api/tasks/due
 If-Modified-Since: <last poll timestamp>
 ```
 
-Returns `304 Not Modified` if nothing changed, otherwise JSON with all tasks due within 7 days.
+Returns `304 Not Modified` if nothing changed, otherwise JSON with all tasks due now (not within 7 days — the agent should poll at its own cadence).
 
 ### Generate a service token
 
@@ -113,7 +116,7 @@ Returns `304 Not Modified` if nothing changed, otherwise JSON with all tasks due
 docker compose exec sprout python -m app.cli create-token --username admin
 ```
 
-Use the token as `Authorization: Bearer <token>` header.
+Use the token as `Authorization: Bearer ***` header.
 
 ## Stack
 
@@ -121,7 +124,7 @@ Use the token as `Authorization: Bearer <token>` header.
 - **Database**: SQLite with WAL mode
 - **Frontend**: Jinja2 templates, Tailwind CSS, Alpine.js
 - **Auth**: PyJWT + bcrypt
-- **Scheduler**: APScheduler
+- **Scheduler**: asyncio background task (lifespan)
 - **Deployment**: Docker, Docker Compose
 
 ## Development
