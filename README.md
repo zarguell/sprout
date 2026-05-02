@@ -18,11 +18,12 @@ Built with FastAPI, SQLite, Tailwind CSS, and Alpine.js. Single Docker container
 
 ## Quick Start
 
-### 1. Clone and configure
+### Docker Hub (recommended)
 
 ```bash
-git clone https://github.com/zarguell/sprout.git
-cd sprout
+mkdir sprout && cd sprout
+curl -o docker-compose.yml https://raw.githubusercontent.com/zarguell/sprout/main/docker-compose.yml
+curl -o .env.example https://raw.githubusercontent.com/zarguell/sprout/main/.env.example
 cp .env.example .env
 ```
 
@@ -32,9 +33,28 @@ Generate a JWT secret and set it in `.env`:
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 2. Run with Docker Compose
+Edit `docker-compose.yml` to use the published image:
+
+```yaml
+services:
+  sprout:
+    image: zarguell/sprout:latest
+    # ... rest of config
+```
+
+Then start:
 
 ```bash
+docker compose up -d
+```
+
+### Build from source
+
+```bash
+git clone https://github.com/zarguell/sprout.git
+cd sprout
+cp .env.example .env
+# Set JWT_SECRET in .env
 docker compose up -d
 ```
 
