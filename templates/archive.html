@@ -1,47 +1,50 @@
 {% extends "base.html" %}
 {% block title %}Archive — Sprout{% endblock %}
+{% block head_extra %}
+<script id="archive-data" type="application/json">{{ plants | tojson }}</script>
+{% endblock %}
 {% block content %}
-<div x-data="{
-    plants: {{ plants | tojson }},
-    taskIcon(type) {
-        return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
-    }
-}">
+<div x-data="archiveData()">
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-gray-900">Archived Plants</h1>
+        <a href="/" class="text-sm text-gray-500 hover:text-emerald-700">← Back to Dashboard</a>
     </div>
 
-    <div x-show="plants.length === 0" class="text-center py-16">
-        <div class="text-5xl mb-4">📦</div>
-        <p class="text-gray-500">No archived plants.</p>
-    </div>
+    <template x-if="plants.length === 0">
+        <div class="text-center py-16">
+            <div class="text-5xl mb-4">🗄️</div>
+            <p class="text-gray-500">No archived plants.</p>
+        </div>
+    </template>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="space-y-3">
         <template x-for="plant in plants" :key="plant.id">
-            <a :href="'/plants/' + plant.id"
-               class="block bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-200 overflow-hidden opacity-75">
-                <div class="h-40 bg-gray-100 flex items-center justify-center">
-                    <template x-if="plant.thumbnail_url">
-                        <img :src="plant.thumbnail_url" class="h-full w-full object-cover" alt="">
-                    </template>
-                    <template x-if="!plant.thumbnail_url">
-                        <span class="text-4xl text-gray-300">🌿</span>
-                    </template>
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+                <div>
+                    <a :href="'/plants/' + plant.id" class="font-semibold text-gray-900 hover:text-emerald-700" x-text="plant.name"></a>
+                    <p x-show="plant.species" class="text-sm text-gray-500" x-text="plant.species"></p>
+                    <p x-show="plant.archived_at" class="text-xs text-gray-400" x-text="'Archived ' + new Date(plant.archived_at).toLocaleDateString()"></p>
+                    <p x-show="plant.archived_reason" class="text-xs text-amber-600" x-text="plant.archived_reason"></p>
                 </div>
-                <div class="p-4">
-                    <h3 class="font-semibold text-gray-900" x-text="plant.name"></h3>
-                    <p x-show="plant.location" class="text-sm text-gray-500 mt-0.5" x-text="plant.location"></p>
-                    <template x-if="plant.next_task">
-                        <div class="mt-2">
-                            <span class="inline-flex items-center gap-1 text-xs rounded-full px-2 py-0.5 bg-gray-100 text-gray-600">
-                                <span x-text="taskIcon(plant.next_task.type)"></span>
-                                <span x-text="plant.next_task.type"></span>
-                            </span>
-                        </div>
-                    </template>
-                </div>
-            </a>
+                <button @click="unarchivePlant(plant.id)"
+                        class="text-sm text-emerald-600 hover:text-emerald-800 font-medium">
+                    Unarchive
+                </button>
+            </div>
         </template>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function archiveData() {
+    return {
+        plants: JSON.parse(document.getElementById('archive-data').textContent),
+        async unarchivePlant(id) {
+            const res = await fetch('/api/plants/' + id + '/archive', { method: 'POST' });
+            if (res.ok) location.reload();
+        }
+    };
+}
+</script>
 {% endblock %}

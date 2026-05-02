@@ -1,28 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Sprout{% endblock %}
+{% block head_extra %}
+<script id="dash-data" type="application/json">{{ plants | tojson }}</script>
+{% endblock %}
 {% block content %}
-<div x-data="{
-    plants: {{ plants | tojson }},
-    showAdd: false,
-    form: { name: '', species: '', location: '', notes: '' },
-    saving: false,
-    async addPlant() {
-        this.saving = true;
-        const body = new URLSearchParams();
-        for (const [k, v] of Object.entries(this.form)) if (v) body.set(k, v);
-        const res = await fetch('/api/plants', { method: 'POST', body });
-        if (res.ok) location.reload();
-        this.saving = false;
-    },
-    taskIcon(type) {
-        return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
-    },
-    overdueClass(plant) {
-        const t = plant.next_task;
-        if (!t || t.days_overdue <= 0) return '';
-        return t.days_overdue >= 3 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
-    }
-}">
+<div x-data="dashData()">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-gray-900">My Plants</h1>
@@ -110,4 +92,33 @@
         </template>
     </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+function dashData() {
+    const data = JSON.parse(document.getElementById('dash-data').textContent);
+    return {
+        plants: data,
+        showAdd: false,
+        form: { name: '', species: '', location: '', notes: '' },
+        saving: false,
+        async addPlant() {
+            this.saving = true;
+            const body = new URLSearchParams();
+            for (const [k, v] of Object.entries(this.form)) if (v) body.set(k, v);
+            const res = await fetch('/api/plants', { method: 'POST', body });
+            if (res.ok) location.reload();
+            this.saving = false;
+        },
+        taskIcon(type) {
+            return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
+        },
+        overdueClass(plant) {
+            const t = plant.next_task;
+            if (!t || t.days_overdue <= 0) return '';
+            return t.days_overdue >= 3 ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800';
+        }
+    };
+}
+</script>
 {% endblock %}
