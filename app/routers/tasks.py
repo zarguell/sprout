@@ -1,14 +1,12 @@
 from datetime import datetime, timezone, timedelta
-from email.utils import formatdate, parsedate_to_datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import Plant, Task, User
-from app.schemas import TaskComplete, TaskCreate, TaskDueRead, TaskRead, TaskUpdate
+from app.schemas import TaskComplete, TaskCreate, TaskRead, TaskUpdate
 
 router = APIRouter(prefix="/plants/{plant_id}/tasks", tags=["tasks"])
 
@@ -144,52 +142,4 @@ async def complete_task(
     return TaskRead.model_validate(task)
 
 
-@router.get("/due")
-async def list_due_tasks(
-    request: Request,
-    plant_id: int,  # ignored
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    now = datetime.now(timezone.utc)
-    seven_days_later = now + timedelta(days=7)
-    result = await db.execute(
-        select(Task, Plant)
-        .join(Plant)
-        .where(
-            Task.is_active == True,
-            Plant.archived == False,
-            Task.due_date <= seven_days_later,
-        )
-        .order_by(Task.due_date)
-    )
-    tasks_plants = result.all()
-    due_tasks = []
-    latest_due_date = now
-    for task, plant in tasks_plants:
-        days_overdue = max(0, (now - task.due_date).days)
-        due_task = TaskDueRead(
-            task_id=task.id,
-            plant_id=plant.id,
-            plant_name=plant.name,
-            location=plant.location,
-            type=task.type,
-            label=task.label,
-            due_date=task.due_date,
-            days_overdue=days_overdue,
-        )
-        due_tasks.append(due_task)
-        if task.due_date > latest_due_date:
-            latest_due_date = task.due_date
-    if not tasks_plants:
-        latest_due_date = now
-    last_modified = formatdate(latest_due_date.timestamp(), usegmt=True)
-    if_modified_since = request.headers.get("If-Modified-Since")
-    if if_modified_since:
-        if_modified_datetime = parsedate_to_datetime(if_modified_since)
-        if latest_due_date <= if_modified_datetime:
-            return Response(status_code=status.HTTP_304_NOT_MODIFIED)
-    return JSONResponse(
-        content=[due_task.model_dump() for due_task in due_tasks],
-        headers={"Last-Modified": last_modified},
-    )
+
