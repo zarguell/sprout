@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - uses: actions/setup-python@e297b23d723e19c41db3a5348b8e7d12f7774945 # v6.0.0
+      - uses: actions/setup-python@a309ff8b42638c3a56572f5b4d0c373c51c4c2d57f6e45 # v5
         with:
           python-version: "3.13"
 
