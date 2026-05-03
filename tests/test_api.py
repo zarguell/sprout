@@ -1,77 +1,16 @@
 """API integration tests — full CRUD flows against an in-memory database."""
 
 import os
-import asyncio
-from contextlib import asynccontextmanager
 
-import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-
-# Point at in-memory SQLite before any app imports
+# Point at in-memory SQLite before any app imports (conftest sets defaults,
+# but this file must ensure env is set before conftest imports)
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["JWT_SECRET"] = "test-secret-for-testing-only"
 
-from app.database import get_db, engine as real_engine
-from app.models import Base
-from app.main import app
+import pytest
 
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
-test_engine = create_async_engine(TEST_DB_URL, echo=False)
-TestSession = sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
-
-
-async def override_get_db():
-    async with TestSession() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-
-@asynccontextmanager
-async def setup_db():
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-@pytest_asyncio.fixture
-async def client():
-    async with setup_db():
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as ac:
-            yield ac
-
-
-@pytest_asyncio.fixture
-async def auth_client(client):
-    """Client with a user created and authenticated."""
-    from app.auth import get_password_hash
-
-    async with TestSession() as db:
-        from app.models import User
-
-        user = User(username="testuser", display_name="Test", hashed_password=get_password_hash("pass123"))
-        db.add(user)
-        await db.commit()
-
-    resp = await client.post(
-        "/api/auth/token",
-        data={"username": "testuser", "password": "pass123"},
-    )
-    assert resp.status_code == 200
-    client.cookies.set("token", resp.json()["access_token"])
-    return client
+from test_shared import TestSession
+from app.models import User
 
 
 # --- Auth ---
@@ -81,14 +20,14 @@ async def auth_client(client):
 async def test_login(auth_client):
     resp = await auth_client.get("/api/users/me")
     assert resp.status_code == 200
-    assert resp.json()["username"] == "testuser"
+    assert resp.json()["username"] == "default_user"
 
 
 @pytest.mark.asyncio
 async def test_login_bad_password(auth_client):
     resp = await auth_client.post(
         "/api/auth/token",
-        data={"username": "testuser", "password": "wrongpass"},
+        data={"username": "default_user", "password": "wrongpass"},
     )
     assert resp.status_code == 401
 

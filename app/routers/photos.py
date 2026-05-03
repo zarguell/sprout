@@ -32,6 +32,11 @@ async def upload_photo(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    # Verify plant exists before doing anything
+    plant = await db.get(Plant, plant_id)
+    if not plant:
+        raise HTTPException(status_code=404, detail="Plant not found")
+
     # Validate extension
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
@@ -81,7 +86,6 @@ async def upload_photo(
 
     # Set as primary if first
     if is_first:
-        plant = await db.get(Plant, plant_id)
         plant.primary_photo_id = photo.id
 
     await db.commit()

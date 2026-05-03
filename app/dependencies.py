@@ -3,7 +3,8 @@
 from typing import Any
 
 from fastapi import Request
-from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
+from pydantic import BaseModel, ValidationError
 
 
 def form_or_json(model_class: type[BaseModel]) -> callable:
@@ -28,12 +29,18 @@ def form_or_json(model_class: type[BaseModel]) -> callable:
             for key in form:
                 values = form.getlist(key)
                 raw[key] = values[0] if len(values) == 1 else values
-            return model_class(**raw)
+            try:
+                return model_class(**raw)
+            except ValidationError as e:
+                raise RequestValidationError(errors=e.errors()) from e
         else:
             body = await request.body()
             if body:
                 import json
-                return model_class(**json.loads(body))
+                try:
+                    return model_class(**json.loads(body))
+                except ValidationError as e:
+                    raise RequestValidationError(errors=e.errors()) from e
             return model_class()
 
     return _parser
