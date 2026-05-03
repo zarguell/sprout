@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#047857">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="apple-touch-icon" href="/static/favicon.svg">
+    <link rel="manifest" href="/static/manifest.json">
     <title>Login — Sprout</title>
     <link rel="stylesheet" href="/static/css/output.css">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center"
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center transition-colors duration-200"
       x-data="{ username: '', password: '', error: '', loading: false }">
     <div class="w-full max-w-sm">
         <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-emerald-700">🌱 Sprout</h1>
-            <p class="text-gray-500 text-sm mt-1">Plant care tracker</p>
+            <h1 class="text-3xl font-bold text-emerald-700 dark:text-emerald-400">🌱 Sprout</h1>
+            <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Plant care tracker</p>
         </div>
         <form @submit.prevent="
             loading = true; error = '';
@@ -25,18 +30,18 @@
                 else return r.json().then(e => { error = e.detail || 'Login failed'; loading = false; });
             }).catch(() => { error = 'Network error'; loading = false; });
         "
-        class="bg-white rounded-lg shadow-md p-6 space-y-4">
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 space-y-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Username</label>
                 <input x-model="username" type="text" required autocomplete="username"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                       class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
                 <input x-model="password" type="password" required autocomplete="current-password"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                       class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
             </div>
-            <div x-show="error" x-text="error" class="text-red-600 text-sm bg-red-50 rounded p-2"></div>
+            <div x-show="error" x-text="error" class="text-red-600 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/30 rounded p-2"></div>
             <button type="submit" :disabled="loading"
                     class="w-full bg-emerald-600 text-white rounded-md py-2 text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                 <span x-show="!loading">Sign in</span>
@@ -44,5 +49,12 @@
             </button>
         </form>
     </div>
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/sw.js');
+        });
+    }
+    </script>
 </body>
 </html>

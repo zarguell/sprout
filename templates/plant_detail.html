@@ -9,27 +9,32 @@
 {% block content %}
 <div x-data="plantDetailData()">
     <!-- Back link -->
-    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-emerald-700 mb-4">
+    <a href="/" class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-700 dark:hover:text-emerald-400 mb-4">
         ← Back to Dashboard
     </a>
 
     <!-- Plant Header -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div class="flex items-start justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900" x-text="plant.name"></h1>
-                <p x-show="plant.species" class="text-gray-500 italic mt-1" x-text="plant.species"></p>
-                <p x-show="plant.location" class="text-sm text-gray-400 mt-1" x-text="'📍 ' + plant.location"></p>
-                <p x-show="plant.notes" class="text-sm text-gray-400 mt-0.5" x-text="plant.notes"></p>
-                <p x-show="plant.archived" class="text-sm text-amber-600 mt-1">Archived</p>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100" x-text="plant.name"></h1>
+                <p x-show="plant.species" class="text-gray-500 dark:text-gray-400 italic mt-1" x-text="plant.species"></p>
+                <p x-show="plant.location" class="text-sm text-gray-400 dark:text-gray-500 mt-1" x-text="'📍 ' + plant.location"></p>
+                <p x-show="plant.notes" class="text-sm text-gray-400 dark:text-gray-500 mt-0.5" x-text="plant.notes"></p>
+                <p x-show="plant.archived" class="text-sm text-amber-600 dark:text-amber-400 mt-1">Archived</p>
             </div>
             <div class="flex gap-2">
+                <button @click="sharePlant()"
+                        class="text-sm border border-gray-300 dark:border-gray-600 rounded px-3 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        title="Share plant">
+                    📤
+                </button>
                 <button @click="editing = true"
-                        class="text-sm border border-gray-300 rounded px-3 py-1 text-gray-600 hover:bg-gray-50">
+                        class="text-sm border border-gray-300 dark:border-gray-600 rounded px-3 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     Edit
                 </button>
                 <button @click="archivePlant()"
-                        class="text-sm border border-amber-300 rounded px-3 py-1 text-amber-700 hover:bg-amber-50">
+                        class="text-sm border border-amber-300 dark:border-amber-700 rounded px-3 py-1 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30">
                     Archive
                 </button>
             </div>
@@ -39,32 +44,32 @@
     <!-- Edit Plant Modal -->
     <div x-show="editing" x-cloak class="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
          @click.self="editing = false">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h2 class="text-lg font-semibold mb-4">Edit Plant</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md p-6">
+            <h2 class="text-lg font-semibold dark:text-gray-100 mb-4">Edit Plant</h2>
             <div class="space-y-3">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                     <input x-model="editForm.name" required
-                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Species</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Species</label>
                     <input x-model="editForm.species"
-                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
                     <input x-model="editForm.location"
-                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                           class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                     <textarea x-model="editForm.notes" rows="2"
-                              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                              class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
                 </div>
             </div>
             <div class="flex justify-end gap-2 mt-5">
-                <button @click="editing = false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                <button @click="editing = false" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800">Cancel</button>
                 <button @click="savePlant()" :disabled="!editForm.name || saving"
                         class="bg-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                     <span x-show="!saving">Save</span>
@@ -75,9 +80,9 @@
     </div>
 
     <!-- Tasks Section -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Tasks</h2>
             <div class="flex gap-2">
                 <button @click="showAddTask = true"
                         class="bg-emerald-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-emerald-700">+ Add Task</button>
@@ -85,22 +90,22 @@
         </div>
 
         <!-- Add Task Form (inline) -->
-        <div x-show="showAddTask" x-cloak class="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+        <div x-show="showAddTask" x-cloak class="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-600 space-y-2">
             <select x-model="taskForm.type"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100">
                 <option value="water">💧 Water</option>
                 <option value="fertilize">🧪 Fertilize</option>
                 <option value="repot">🪴 Repot</option>
                 <option value="custom">📋 Custom</option>
             </select>
             <input x-model="taskForm.label" placeholder="Label (optional)"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                   class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
             <input x-model="taskForm.due_date" type="date"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                   class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100">
             <input type="number" x-model="taskForm.interval_days" placeholder="Every N days (optional)"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                   class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500">
             <div class="flex justify-end gap-2">
-                <button @click="showAddTask = false" class="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
+                <button @click="showAddTask = false" class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
                 <button @click="addTask()" :disabled="!taskForm.due_date || saving"
                         class="bg-emerald-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                     <span x-show="!saving">Create</span>
@@ -110,17 +115,17 @@
         </div>
 
         <template x-if="tasks.length === 0">
-            <p class="text-gray-400 text-sm">No tasks yet.</p>
+            <p class="text-gray-400 dark:text-gray-500 text-sm">No tasks yet.</p>
         </template>
         <template x-for="task in tasks" :key="task.id">
-            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                 <div class="flex items-center gap-2">
                     <span x-text="taskIcon(task.type)"></span>
-                    <span class="text-sm text-gray-700" x-text="task.label || task.type"></span>
-                    <span class="text-xs text-gray-400" x-text="new Date(task.due_date).toLocaleDateString()"></span>
-                    <span x-show="task.interval_days" class="text-xs text-blue-500" x-text="recurrenceLabel(task.interval_days)"></span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300" x-text="task.label || task.type"></span>
+                    <span class="text-xs text-gray-400 dark:text-gray-500" x-text="new Date(task.due_date).toLocaleDateString()"></span>
+                    <span x-show="task.interval_days" class="text-xs text-blue-500 dark:text-blue-400" x-text="recurrenceLabel(task.interval_days)"></span>
                 </div>
-                <button @click="completeTask(task.id)" class="text-xs text-emerald-600 hover:text-emerald-800 font-medium">
+                <button @click="completeTask(task.id)" class="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 font-medium">
                     Complete
                 </button>
             </div>
@@ -128,17 +133,17 @@
     </div>
 
     <!-- Activity Section -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-gray-900">Activity Log</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Activity Log</h2>
             <button @click="showAddActivity = true"
-                    class="bg-white border border-gray-300 text-gray-600 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-50">+ Log</button>
+                    class="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-600">+ Log</button>
         </div>
 
         <!-- Add Activity Form (inline) -->
-        <div x-show="showAddActivity" x-cloak class="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200 space-y-2">
+        <div x-show="showAddActivity" x-cloak class="mb-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-600 space-y-2">
             <select x-model="activityForm.type"
-                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100">
                 <option value="water">💧 Watered</option>
                 <option value="fertilize">🧪 Fertilized</option>
                 <option value="repot">🪴 Repotted</option>
@@ -146,9 +151,9 @@
                 <option value="note">📝 Note</option>
             </select>
             <textarea x-model="activityForm.notes" placeholder="Notes (optional)" rows="2"
-                      class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"></textarea>
+                      class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"></textarea>
             <div class="flex justify-end gap-2">
-                <button @click="showAddActivity = false" class="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
+                <button @click="showAddActivity = false" class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
                 <button @click="addActivity()" :disabled="!activityForm.type || saving"
                         class="bg-emerald-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                     <span x-show="!saving">Log</span>
@@ -158,45 +163,45 @@
         </div>
 
         <template x-if="activity.length === 0">
-            <p class="text-gray-400 text-sm">No activity logged yet.</p>
+            <p class="text-gray-400 dark:text-gray-500 text-sm">No activity logged yet.</p>
         </template>
         <template x-for="entry in activity" :key="entry.id">
-            <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
                 <div class="flex items-center gap-2">
                     <span x-text="activityIcon(entry.type)"></span>
-                    <span class="text-sm text-gray-700" x-text="entry.notes || entry.type"></span>
+                    <span class="text-sm text-gray-700 dark:text-gray-300" x-text="entry.notes || entry.type"></span>
                 </div>
-                <span class="text-xs text-gray-400" x-text="new Date(entry.created_at).toLocaleDateString()"></span>
+                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="new Date(entry.created_at).toLocaleDateString()"></span>
             </div>
         </template>
     </div>
 
     <!-- Photos Section -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Photos</h2>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Photos</h2>
         <div x-show="!uploadPreview" class="mb-4 flex gap-3">
             <input type="file" x-ref="photoInput" @change="handlePhotoUpload($event)" accept="image/*"
-                   class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                   class="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-emerald-50 dark:file:bg-emerald-900/50 file:text-emerald-700 dark:file:text-emerald-300 hover:file:bg-emerald-100 dark:hover:file:bg-emerald-900/70">
         </div>
         <div x-show="uploadPreview" class="mb-4">
             <img :src="uploadPreview" class="h-32 w-auto rounded mb-2">
             <input type="text" x-model="uploadCaption" placeholder="Caption (optional)"
-                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm mb-2">
+                   class="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm bg-white dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 mb-2">
             <div class="flex gap-2">
                 <button @click="submitPhoto()" :disabled="uploading"
                         class="bg-emerald-600 text-white px-3 py-1.5 rounded text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
                     <span x-show="!uploading">Upload</span>
                     <span x-show="uploading">Uploading…</span>
                 </button>
-                <button @click="cancelUpload()" class="px-3 py-1.5 text-sm text-gray-600">Cancel</button>
+                <button @click="cancelUpload()" class="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400">Cancel</button>
             </div>
         </div>
         <template x-if="photos.length === 0">
-            <p class="text-gray-400 text-sm">No photos yet.</p>
+            <p class="text-gray-400 dark:text-gray-500 text-sm">No photos yet.</p>
         </template>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <template x-for="photo in photos" :key="photo.id">
-                <div class="rounded-md overflow-hidden bg-gray-100 relative">
+                <div class="rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700 relative">
                     <img :src="photo.url" class="w-full h-40 object-cover" :class="{ 'opacity-60': photo.is_primary }" alt="">
                     <span x-show="photo.is_primary" class="absolute top-1 left-1 bg-emerald-600 text-white text-xs px-1.5 py-0.5 rounded">Primary</span>
                     <button x-show="!photo.is_primary" @click="setPrimaryPhoto(photo.id)"
@@ -234,6 +239,21 @@ function plantDetailData() {
                 location: this.plant.location || '',
                 notes: this.plant.notes || ''
             };
+        },
+        async sharePlant() {
+            const url = window.location.href;
+            const title = this.plant.name;
+            const text = `Check out ${title} on Sprout`;
+            if (navigator.share) {
+                try { await navigator.share({ title, text, url }); } catch {}
+            } else {
+                try {
+                    await navigator.clipboard.writeText(url);
+                    const btn = event.currentTarget;
+                    btn.textContent = '✅';
+                    setTimeout(() => { btn.textContent = '📤'; }, 2000);
+                } catch {}
+            }
         },
         async savePlant() {
             this.saving = true;
