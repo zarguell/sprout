@@ -6,28 +6,28 @@
 {% block content %}
 <div x-data="archiveData()">
     <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Archived Plants</h1>
-        <a href="/" class="text-sm text-gray-500 hover:text-emerald-700">← Back to Dashboard</a>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Archived Plants</h1>
+        <a href="/" class="text-sm text-gray-500 dark:text-gray-400 hover:text-emerald-700 dark:hover:text-emerald-400">← Back to Dashboard</a>
     </div>
 
     <template x-if="plants.length === 0">
         <div class="text-center py-16">
             <div class="text-5xl mb-4">🗄️</div>
-            <p class="text-gray-500">No archived plants.</p>
+            <p class="text-gray-500 dark:text-gray-400">No archived plants.</p>
         </div>
     </template>
 
     <div class="space-y-3">
         <template x-for="plant in plants" :key="plant.id">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center justify-between">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
                 <div>
-                    <a :href="'/plants/' + plant.id" class="font-semibold text-gray-900 hover:text-emerald-700" x-text="plant.name"></a>
-                    <p x-show="plant.species" class="text-sm text-gray-500" x-text="plant.species"></p>
-                    <p x-show="plant.archived_at" class="text-xs text-gray-400" x-text="'Archived ' + new Date(plant.archived_at).toLocaleDateString()"></p>
-                    <p x-show="plant.archived_reason" class="text-xs text-amber-600" x-text="plant.archived_reason"></p>
+                    <a :href="'/plants/' + plant.id" class="font-semibold text-gray-900 dark:text-gray-100 hover:text-emerald-700 dark:hover:text-emerald-400" x-text="plant.name"></a>
+                    <p x-show="plant.species" class="text-sm text-gray-500 dark:text-gray-400" x-text="plant.species"></p>
+                    <p x-show="plant.archived_at" class="text-xs text-gray-400 dark:text-gray-500" x-text="'Archived ' + new Date(plant.archived_at).toLocaleDateString()"></p>
+                    <p x-show="plant.archived_reason" class="text-xs text-amber-600 dark:text-amber-400" x-text="plant.archived_reason"></p>
                 </div>
                 <button @click="unarchivePlant(plant.id)"
-                        class="text-sm text-emerald-600 hover:text-emerald-800 font-medium">
+                        class="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium">
                     Unarchive
                 </button>
             </div>

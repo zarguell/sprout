@@ -5,8 +5,10 @@ __pycache__/
 .venv/
 node_modules/
 data/
-static/css/output.css
 *.db
 .pytest_cache/
 dist/
 build/
+.coverage
+_debug_failures.py
+_debug_status.py

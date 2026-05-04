@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="Sprout", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Sprout", version="0.1.0", lifespan=lifespan, redirect_slashes=False)
 
 
 # Redirect unauthenticated browser requests to /login

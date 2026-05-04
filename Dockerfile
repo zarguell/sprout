@@ -1,4 +1,4 @@
-FROM node:22-slim AS css-build
+FROM node:24-slim AS css-build
 
 WORKDIR /build
 

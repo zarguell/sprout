@@ -1,0 +1,17 @@
+{
+  "name": "Sprout",
+  "short_name": "Sprout",
+  "description": "Plant care tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#047857",
+  "icons": [
+    {
+      "src": "/static/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
