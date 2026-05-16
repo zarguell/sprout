@@ -28,3 +28,9 @@ def get_content_type(file_path: str) -> str:
 
 def generate_photo_filename(plant_id: int) -> str:
     return f"{plant_id}/{uuid4().hex}"
+
+
+def photo_urls(plant_id: int, photo_id: int) -> tuple[str, str]:
+    """Return (original_url, thumbnail_url) for a photo."""
+    base = f"/api/plants/{plant_id}/photos/{photo_id}"
+    return f"{base}/file", f"{base}/thumbnail"

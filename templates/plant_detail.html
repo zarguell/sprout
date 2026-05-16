@@ -291,9 +291,6 @@ function plantDetailData() {
             if (res.ok) location.reload();
             this.saving = false;
         },
-        taskIcon(type) {
-            return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
-        },
         activityIcon(type) {
             return { water: '💧', fertilize: '🧪', repot: '🪴', prune: '✂️', note: '📝' }[type] || '📝';
         },
@@ -322,12 +319,7 @@ function plantDetailData() {
             this.uploadPreview = null;
             this.$refs.photoInput.value = '';
         },
-        recurrenceLabel(interval) {
-            if (interval === 7) return 'Weekly';
-            if (interval === 14) return 'Biweekly';
-            if (interval === 30) return 'Monthly';
-            return 'Every ' + interval + ' days';
-        }
+
     };
 }
 </script>

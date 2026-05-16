@@ -19,11 +19,6 @@ NOTE: All list/create endpoints use trailing slashes (e.g., POST /api/plants/)
 because Starlette's redirect_slashes=True redirects /api/plants → /api/plants/
 with a 307, which the httpx test client follows transparently.
 """
-import os
-
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["JWT_SECRET"] = "test-secret-for-testing-only"
-
 import pytest
 import pytest_asyncio
 from fastapi import status
@@ -374,28 +369,26 @@ class TestTasks:
         assert (await ac.delete(f"/api/tasks/{tid}")).status_code == 204
         assert (await ac.get(f"/api/plants/{plant['id']}/tasks/99999")).status_code == 404
 
-    # --- Bug detection: frontend JS uses wrong URL for complete ---
+    # --- Regression: scoped complete route (was broken, now fixed) ---
     @pytest.mark.asyncio
-    async def test_plant_scoped_complete_url_does_not_exist(self, ac, plant):
+    async def test_plant_scoped_complete_url(self, ac, plant):
         """
         The frontend JS at plant_detail.html calls
-        POST /api/plants/{plant_id}/tasks/{task_id}/complete
-        but the actual route is POST /api/tasks/{task_id}/complete (flat router).
-
-        This proves the Complete button in the UI is broken — the user clicks
-        'Complete' on a task in plant_detail.html and nothing happens (error is
-        swallowed by a catch block that shows a toast).
+        POST /api/plants/{plant_id}/tasks/{task_id}/complete.
+        This endpoint was missing (dead link) and has been added via the
+        scoped router to match what the frontend actually sends.
         """
         r = await ac.post(f"/api/plants/{plant['id']}/tasks/",
                           json={"type": "water", "due_date": "2026-05-02"})
         tid = r.json()["id"]
 
         resp = await ac.post(f"/api/plants/{plant['id']}/tasks/{tid}/complete")
-        assert resp.status_code in (404, 405), (
-            f"Frontend JS uses /api/plants/.../tasks/.../complete but got "
-            f"{resp.status_code}. The real route is /api/tasks/{{id}}/complete. "
-            f"This means the Complete button is a dead link in the UI."
+        assert resp.status_code == 200, (
+            f"Frontend uses /api/plants/.../tasks/.../complete but got "
+            f"{resp.status_code}. Expected 200 since the scoped route was added."
         )
+        data = resp.json()
+        assert data["is_active"] == False  # one-shot task consumed
 
 
 # ============================================================

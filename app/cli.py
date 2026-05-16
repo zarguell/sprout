@@ -2,14 +2,11 @@ import argparse
 import asyncio
 import getpass
 import os
-from dotenv import load_dotenv
 
 from app.auth import get_password_hash, create_service_token
 from app.database import async_session
 from app.models import User, Photo
 from sqlalchemy import select
-
-load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/db/sprout.db")
 PHOTO_STORAGE_PATH = os.getenv("PHOTO_STORAGE_PATH", "./data/photos")

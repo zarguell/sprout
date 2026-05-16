@@ -3,12 +3,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from datetime import datetime, timezone
 
-from app.auth import get_current_user, get_password_hash, verify_password, create_access_token, create_service_token
+from app.auth import get_current_user, get_password_hash, verify_password, create_access_token, create_service_token, _extract_token, _decode_token
 from app.database import get_db
 from app.models import User, RevokedToken
 from app.schemas import UserRead, UserUpdate, TokenResponse
-import jwt
-import os
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -70,20 +68,11 @@ async def revoke_token(
     current_user: User = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    token = request.cookies.get("token")
-    if not token:
-        auth_header = request.headers.get("Authorization")
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+    token = _extract_token(request)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    jwt_secret = os.environ["JWT_SECRET"]
-    try:
-        payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
+    payload = _decode_token(token)
     jti = payload.get("jti")
     exp = payload.get("exp")
     if not jti or not exp:

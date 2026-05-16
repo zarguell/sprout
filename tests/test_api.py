@@ -1,12 +1,5 @@
 """API integration tests — full CRUD flows against an in-memory database."""
 
-import os
-
-# Point at in-memory SQLite before any app imports (conftest sets defaults,
-# but this file must ensure env is set before conftest imports)
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["JWT_SECRET"] = "test-secret-for-testing-only"
-
 import pytest
 
 from test_shared import TestSession

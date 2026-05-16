@@ -1,10 +1,9 @@
 import asyncio
 from contextlib import asynccontextmanager
-import os
 from datetime import datetime, timezone, timedelta
-from email.utils import formatdate, parsedate_to_datetime
+import os
 
-from fastapi import APIRouter, Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import RedirectResponse
@@ -14,9 +13,9 @@ from sqlalchemy import select
 
 from app.auth import get_current_user
 from app.database import get_db
+from app.images import photo_urls
 from app.models import Plant, Task, User
 from app.routers import activity, photos, plants, tasks, users
-from app.schemas import TaskDueRead
 
 
 def _ensure_tz(dt: datetime) -> datetime:
@@ -65,114 +64,11 @@ app.include_router(users.users_router, prefix="/api")
 app.include_router(users.auth_router, prefix="/api")
 app.include_router(tasks.router, prefix="/api")
 app.include_router(tasks.flat_router, prefix="/api")
+app.include_router(tasks.api_router, prefix="/api")
 app.include_router(plants.router, prefix="/api")
 app.include_router(photos.router, prefix="/api")
 app.include_router(photos.flat_router, prefix="/api")
 app.include_router(activity.router, prefix="/api")
-
-
-# Global /tasks/due endpoint (not scoped under /plants/{plant_id})
-@app.get("/api/tasks/due")
-async def list_due_tasks(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    now = datetime.now(timezone.utc)
-    result = await db.execute(
-        select(Task, Plant)
-        .join(Plant)
-        .where(
-            Task.is_active == True,
-            Plant.archived == False,
-            Task.due_date <= now,
-        )
-        .order_by(Task.due_date)
-    )
-    rows = result.all()
-    due_tasks = []
-    latest = now
-    for t, p in rows:
-        dd = _ensure_tz(t.due_date)
-        days = max(0, (now - dd).days)
-        due_tasks.append(
-            TaskDueRead(
-                task_id=t.id,
-                plant_id=p.id,
-                plant_name=p.name,
-                location=p.location,
-                type=t.type,
-                label=t.label,
-                due_date=dd,
-                days_overdue=days,
-            )
-        )
-        if dd > latest:
-            latest = dd
-    if not rows:
-        latest = now
-    lm = formatdate(latest.timestamp(), usegmt=True)
-    ims = request.headers.get("If-Modified-Since")
-    if ims:
-        if parsedate_to_datetime(ims) >= latest:
-            return Response(status_code=304)
-    return JSONResponse(
-        content=[t.model_dump(mode="json") for t in due_tasks],
-        headers={"Last-Modified": lm},
-    )
-
-
-@app.get("/api/tasks/upcoming")
-async def list_upcoming_tasks(
-    request: Request,
-    days: int = 3,
-    current_user: User = Depends(get_current_user),
-    db=Depends(get_db),
-):
-    now = datetime.now(timezone.utc)
-    horizon = now + timedelta(days=days)
-    result = await db.execute(
-        select(Task, Plant)
-        .join(Plant)
-        .where(
-            Task.is_active == True,
-            Plant.archived == False,
-            Task.due_date <= horizon,
-        )
-        .order_by(Task.due_date)
-    )
-    rows = result.all()
-    upcoming_tasks = []
-    latest = now
-    for t, p in rows:
-        dd = _ensure_tz(t.due_date)
-        delta = (dd - now).days
-        days_until = max(0, -delta) if delta < 0 else delta
-        upcoming_tasks.append(
-            TaskDueRead(
-                task_id=t.id,
-                plant_id=p.id,
-                plant_name=p.name,
-                location=p.location,
-                type=t.type,
-                label=t.label,
-                due_date=dd,
-                days_overdue=max(0, -delta),
-            )
-        )
-        if dd > latest:
-            latest = dd
-    if not rows:
-        latest = now
-    lm = formatdate(latest.timestamp(), usegmt=True)
-    ims = request.headers.get("If-Modified-Since")
-    if ims:
-        if parsedate_to_datetime(ims) >= latest:
-            return Response(status_code=304)
-    return JSONResponse(
-        content=[t.model_dump(mode="json") for t in upcoming_tasks],
-        headers={"Last-Modified": lm},
-    )
 
 
 @app.get("/health")
@@ -206,10 +102,10 @@ async def dashboard_page(request: Request, current_user: User = Depends(get_curr
         thumbnail_url = None
         for photo in p.photos:
             if photo.is_primary:
-                thumbnail_url = f"/api/plants/{p.id}/photos/{photo.id}/thumbnail"
+                _, thumbnail_url = photo_urls(p.id, photo.id)
                 break
         if not thumbnail_url and p.photos:
-            thumbnail_url = f"/api/plants/{p.id}/photos/{p.photos[0].id}/thumbnail"
+            _, thumbnail_url = photo_urls(p.id, p.photos[0].id)
 
         # Get next due task
         task_result = await db.execute(
@@ -260,10 +156,10 @@ async def archive_page(request: Request, current_user: User = Depends(get_curren
         thumbnail_url = None
         for photo in p.photos:
             if photo.is_primary:
-                thumbnail_url = f"/api/plants/{p.id}/photos/{photo.id}/thumbnail"
+                _, thumbnail_url = photo_urls(p.id, photo.id)
                 break
         if not thumbnail_url and p.photos:
-            thumbnail_url = f"/api/plants/{p.id}/photos/{p.photos[0].id}/thumbnail"
+            _, thumbnail_url = photo_urls(p.id, p.photos[0].id)
 
         plant_data.append({
             "id": p.id,
@@ -316,10 +212,11 @@ async def plant_detail_page(
     # Photos
     photos_list = []
     for ph in plant.photos:
+        file_url, thumbnail_url = photo_urls(plant_id, ph.id)
         photos_list.append({
             "id": ph.id,
-            "thumbnail_url": f"/api/plants/{plant_id}/photos/{ph.id}/thumbnail",
-            "file_url": f"/api/plants/{plant_id}/photos/{ph.id}/file",
+            "thumbnail_url": thumbnail_url,
+            "file_url": file_url,
             "caption": ph.caption,
             "is_primary": ph.is_primary,
         })

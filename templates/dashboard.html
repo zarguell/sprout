@@ -111,17 +111,10 @@ function dashData() {
             if (res.ok) location.reload();
             this.saving = false;
         },
-        taskIcon(type) {
-            return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
-        },
         overdueClass(plant) {
             const t = plant.next_task;
             if (!t || t.days_overdue <= 0) return '';
-            return t.days_overdue >= 3 ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300';
-        },
-        recurrenceLabel(days) {
-            const labels = { 7: 'weekly', 14: 'biweekly', 30: 'monthly' };
-            return labels[days] || `every ${days} days`;
+            return overdueBadgeClass(t.days_overdue);
         }
     };
 }

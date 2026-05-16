@@ -15,6 +15,7 @@ from app.images import (
     create_thumbnail,
     generate_photo_filename,
     get_content_type,
+    photo_urls,
 )
 from app.models import Photo, Plant
 from app.schemas import PhotoRead
@@ -101,8 +102,7 @@ async def upload_photo(
         select(Plant.primary_photo_id).where(Plant.id == plant_id)
     )
     primary_id = plant_result.scalar()
-    original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
-    thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
+    original_url, thumbnail_url = photo_urls(plant_id, photo.id)
     is_primary = photo.id == primary_id
     return PhotoRead.model_validate(
         {
@@ -141,8 +141,7 @@ async def list_photos(
     primary_id = plant_result.scalar()
     photos_read = []
     for photo in photos:
-        original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
-        thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
+        original_url, thumbnail_url = photo_urls(plant_id, photo.id)
         is_primary = photo.id == primary_id
         photos_read.append(
             PhotoRead.model_validate(
@@ -183,8 +182,7 @@ async def set_primary_photo(
     await db.commit()
 
     # Return PhotoRead
-    original_url = f"/api/plants/{plant_id}/photos/{photo.id}/file"
-    thumbnail_url = f"/api/plants/{plant_id}/photos/{photo.id}/thumbnail"
+    original_url, thumbnail_url = photo_urls(plant_id, photo.id)
     return PhotoRead.model_validate(
         {
             "id": photo.id,

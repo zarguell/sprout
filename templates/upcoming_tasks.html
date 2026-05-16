@@ -22,7 +22,7 @@
                             <span class="text-gray-400 dark:text-gray-500">·</span>
                             <span class="text-sm text-gray-500 dark:text-gray-400" x-text="formatDate(task.due_date)"></span>
                             <template x-if="task.interval_days">
-                                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="recurrenceText(task.interval_days)"></span>
+                                <span class="text-xs text-gray-400 dark:text-gray-500" x-text="recurrenceLabel(task.interval_days)"></span>
                             </template>
                             <template x-if="task.is_overdue && task.days_overdue > 0">
                                 <span class="text-xs rounded-full px-2 py-0.5" :class="overdueBadgeClass(task.days_overdue)" x-text="task.days_overdue + 'd overdue'"></span>
@@ -57,23 +57,9 @@ function upcomingData() {
                 { key: 'later', label: 'Later', tasks: later }
             ];
         },
-        taskIcon(type) {
-            return { water: '💧', fertilize: '🧪', repot: '🪴', custom: '📋' }[type] || '📋';
-        },
-        recurrenceText(days) {
-            if (days === 7) return 'Weekly';
-            if (days === 14) return 'Biweekly';
-            if (days === 30) return 'Monthly';
-            return 'Every ' + days + ' days';
-        },
         formatDate(iso) {
             const d = new Date(iso);
             return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        },
-        overdueBadgeClass(days) {
-            return days >= 3
-                ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-                : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300';
         }
     };
 }

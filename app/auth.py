@@ -53,23 +53,31 @@ def create_service_token(user_id: int, username: str) -> str:
     return jwt.encode(payload, jwt_secret, algorithm="HS256")
 
 
-async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
+def _extract_token(request: Request) -> str:
     token = request.cookies.get("token")
     if not token:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header[7:]
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    return token
 
+
+def _decode_token(token: str) -> dict | None:
     jwt_secret = os.environ["JWT_SECRET"]
     try:
-        payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+        return jwt.decode(token, jwt_secret, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
+async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)) -> User:
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    payload = _decode_token(token)
     jti = payload.get("jti")
     if not jti:
         raise HTTPException(status_code=401, detail="Invalid token")
