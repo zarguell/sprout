@@ -3,7 +3,6 @@ FROM node:24-slim AS css-build
 WORKDIR /build
 
 COPY package.json ./
-COPY tailwind.config.js ./
 COPY src/input.css ./src/input.css
 COPY templates/ ./templates/
 
