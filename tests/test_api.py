@@ -387,9 +387,9 @@ async def test_upcoming_tasks_days_param(auth_client):
     pid = plant.json()["id"]
     await auth_client.post(
         f"/api/plants/{pid}/tasks/",
-        json={"type": "water", "due_date": "2026-08-01"},
+        json={"type": "water", "due_date": "2099-01-01"},
     )
-    # With days=1, this should not appear
+    # With days=1, this should not appear (2099 is beyond any horizon)
     resp = await auth_client.get("/api/tasks/upcoming?days=1")
     assert resp.status_code == 200
     assert len(resp.json()) == 0
