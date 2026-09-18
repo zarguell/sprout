@@ -1,5 +1,5 @@
 aiosqlite==0.22.1
-alembic==1.19.2
+alembic==1.20.0
 annotated-types==0.8.0
 anyio==4.15.1
 bcrypt==5.0.0
