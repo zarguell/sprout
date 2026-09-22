@@ -19,7 +19,7 @@ PyJWT==2.14.0
 python-dotenv==1.2.3
 python-multipart==0.0.32
 PyYAML==6.0.3
-SQLAlchemy==2.0.52
+SQLAlchemy==2.0.53
 starlette==1.6.0
 typing-inspection==0.4.4
 typing_extensions==4.16.0
