@@ -1,7 +1,7 @@
 aiosqlite==0.22.1
 alembic==1.20.1
 annotated-types==0.8.0
-anyio==4.15.1
+anyio==4.16.0
 bcrypt==5.0.0
 click==8.5.0
 fastapi==0.162.0
