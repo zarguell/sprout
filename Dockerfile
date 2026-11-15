@@ -9,7 +9,7 @@ COPY templates/ ./templates/
 RUN npm install
 RUN npm run build:css
 
-FROM python:3.14-slim
+FROM python:3.15-slim
 
 RUN adduser --system --group appuser
 
